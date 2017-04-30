@@ -1,6 +1,6 @@
 #include "decG_utils.h"
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
+// #include <gsl/gsl_rng.h>
+// #include <gsl/gsl_randist.h>
 #include "omp.h"
 #include <math.h>
 #include <time.h>

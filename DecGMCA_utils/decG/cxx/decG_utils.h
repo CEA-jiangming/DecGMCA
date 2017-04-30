@@ -41,11 +41,16 @@
 
 #include <boost/python.hpp>
 #include <boost/numpy.hpp>
+#include "omp.h"
 
 #include "NumPyArrayData.h" 
 
+#define NUM_THREADS 24
+
 namespace bp = boost::python;
 namespace np = boost::numpy;
+
+using namespace std;
 
 class PLK
 {
@@ -95,7 +100,7 @@ public:
                 
         int x=0;
         
-        #pragma omp parallel for shared(x, X_data, B_data, Out_data, MixMat,eps, NSources,NFreq)
+        #pragma omp parallel for shared(x, X_data, B_data, Out_data, MixMat,eps, NSources,NFreq) num_threads(NUM_THREADS)
         for (x=0; x < Nx; x++) {
             
             double *pt_Ht = (double *) malloc(sizeof(double)*NFreq*NSources);  // This is the mixing matrix
@@ -183,7 +188,7 @@ public:
         
         int x=0;
         
-        #pragma omp parallel for shared(x, X_re_data, X_im_data, B_data, Out_re_data, S_re_data, S_im_data, NSources,Nx)
+        #pragma omp parallel for shared(x, X_re_data, X_im_data, B_data, Out_re_data, S_re_data, S_im_data, NSources,Nx) num_threads(NUM_THREADS)
         for (x=0; x < NFreq; x++) {
             
             double *pt_Ht_re = (double *) malloc(sizeof(double)*Nx*NSources);  // This is the source matrix

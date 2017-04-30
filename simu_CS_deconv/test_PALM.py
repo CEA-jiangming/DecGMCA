@@ -17,7 +17,7 @@ import os
 import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from pyDecGMCA.Forward_BSS import *
+from pyDecGMCA.algoDecG import *
 from pyDecGMCA.mathTools import *
 from simulationsTools.MakeExperiment import *
 

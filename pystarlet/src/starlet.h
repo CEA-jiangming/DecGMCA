@@ -46,6 +46,8 @@
 #include "NumPyArrayData.h"
 #include "omp.h"
 
+#define NUM_THREADS 24
+
 namespace bp = boost::python;
 namespace np = boost::numpy;
 
@@ -237,7 +239,8 @@ public:
         np::ndarray Out = np::zeros(bp::make_tuple(Nx,nscales,Ny), np::dtype::get_builtin<double>());
         NumPyArrayData<double> Out_data(Out);
         
-        #pragma omp parallel for
+        #pragma omp parallel for num_threads(NUM_THREADS)
+//        #pragma omp parallel for
         for (int x =0; x< Nx; x++){
             
             double *pt_In = (double *) malloc(sizeof(double)*Ny);
@@ -270,8 +273,8 @@ public:
         np::ndarray Out = np::zeros(bp::make_tuple(Nx,nscales,Ny), np::dtype::get_builtin<double>());
         NumPyArrayData<double> Out_data(Out);
         
-//        #pragma omp parallel for num_threads(8)
-        #pragma omp parallel for
+        #pragma omp parallel for num_threads(NUM_THREADS)
+//        #pragma omp parallel for
         for (int x =0; x< Nx; x++){
             
             double *pt_In = (double *) malloc(sizeof(double)*Ny);
@@ -303,7 +306,8 @@ public:
         np::ndarray Out = np::zeros(bp::make_tuple(Nx,Ny), np::dtype::get_builtin<double>());
         NumPyArrayData<double> Out_data(Out);
         
-        #pragma omp parallel for
+        #pragma omp parallel for num_threads(NUM_THREADS)
+//        #pragma omp parallel for
         for (int x=0; x < Nx; x++) {
             
             double *pt_In = (double *) malloc (sizeof(double)*nscales*Ny);
@@ -335,7 +339,8 @@ public:
         np::ndarray Out = np::zeros(bp::make_tuple(Nx,Ny), np::dtype::get_builtin<double>());
         NumPyArrayData<double> Out_data(Out);
         
-        #pragma omp parallel for
+        #pragma omp parallel for num_threads(NUM_THREADS)
+//        #pragma omp parallel for
         for (int x=0; x < Nx; x++) {
             
             double *pt_In = (double *) malloc (sizeof(double)*nscales*Ny);
@@ -368,7 +373,8 @@ public:
         np::ndarray Out = np::zeros(bp::make_tuple(Nx,Ny), np::dtype::get_builtin<double>());
         NumPyArrayData<double> Out_data(Out);
         
-        #pragma omp parallel for
+        #pragma omp parallel for num_threads(NUM_THREADS)
+//        #pragma omp parallel for
         for (int x=0; x < Nx; x++) {
             
             double *pt_In = (double *) malloc (sizeof(double)*nscales*Ny);
@@ -400,7 +406,8 @@ public:
         np::ndarray Out = np::zeros(bp::make_tuple(Nx,Ny), np::dtype::get_builtin<double>());
         NumPyArrayData<double> Out_data(Out);
         
-        #pragma omp parallel for
+        #pragma omp parallel for num_threads(NUM_THREADS)
+//        #pragma omp parallel for
         for (int x=0; x < Nx; x++) {
             
             double *pt_In = (double *) malloc (sizeof(double)*nscales*Ny);
@@ -857,7 +864,8 @@ public:
         np::ndarray Out = np::zeros(bp::make_tuple(NSr,nscales,Nx,Ny), np::dtype::get_builtin<double>());
         NumPyArrayData<double> Out_data(Out);
 
-        # pragma omp parallel for
+        #pragma omp parallel for num_threads(NUM_THREADS)
+//        # pragma omp parallel for
         for (int s=0; s<NSr; s++) {
             
             double *pt_In = (double *) malloc(sizeof(double)*Nx*Ny);
@@ -895,7 +903,8 @@ public:
         np::ndarray Out = np::zeros(bp::make_tuple(NSr,nscales,Nx,Ny), np::dtype::get_builtin<double>());
         NumPyArrayData<double> Out_data(Out);
         
-        # pragma omp parallel for
+        #pragma omp parallel for num_threads(NUM_THREADS)
+//        # pragma omp parallel for
         for (int s=0; s<NSr; s++) {
             
             double *pt_In = (double *) malloc(sizeof(double)*Nx*Ny);
@@ -931,7 +940,8 @@ public:
         np::ndarray Out = np::zeros(bp::make_tuple(NSr,Nx,Ny), np::dtype::get_builtin<double>());
         NumPyArrayData<double> Out_data(Out);
         
-        # pragma omp parallel for
+        #pragma omp parallel for num_threads(NUM_THREADS)
+//        # pragma omp parallel for
         for (int s=0; s<NSr; s++) {
             
             double *pt_In = (double *) malloc (sizeof(double)*Nx*Ny*nscales);
@@ -967,7 +977,8 @@ public:
         np::ndarray Out = np::zeros(bp::make_tuple(NSr,Nx,Ny), np::dtype::get_builtin<double>());
         NumPyArrayData<double> Out_data(Out);
         
-        # pragma omp parallel for
+        #pragma omp parallel for num_threads(NUM_THREADS)
+//        # pragma omp parallel for
         for (int s=0; s<NSr; s++) {
             
             double *pt_In = (double *) malloc (sizeof(double)*Nx*Ny*nscales);
@@ -1003,7 +1014,8 @@ public:
         np::ndarray Out = np::zeros(bp::make_tuple(NSr,Nx,Ny), np::dtype::get_builtin<double>());
         NumPyArrayData<double> Out_data(Out);
         
-        # pragma omp parallel for
+        #pragma omp parallel for num_threads(NUM_THREADS)
+//        # pragma omp parallel for
         for (int s=0; s<NSr; s++) {
             
             double *pt_In = (double *) malloc (sizeof(double)*Nx*Ny*nscales);
@@ -1038,8 +1050,8 @@ public:
         np::ndarray Out = np::zeros(bp::make_tuple(NSr,Nx,Ny), np::dtype::get_builtin<double>());
         NumPyArrayData<double> Out_data(Out);
 
-        
-        # pragma omp parallel for
+        #pragma omp parallel for num_threads(NUM_THREADS)
+//        # pragma omp parallel for
         for (int s=0; s<NSr; s++) {
             
             double *pt_In = (double *) malloc (sizeof(double)*Nx*Ny*nscales);

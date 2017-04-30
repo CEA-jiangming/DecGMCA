@@ -10,9 +10,10 @@ import pylab
 import param
 import os
 import sys
+import time
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from pyDecGMCA.Forward_BSS import *
+from pyDecGMCA.algoDecG import *
 from pyDecGMCA.mathTools import *
 from simulationsTools.MakeExperiment import *
 
@@ -56,11 +57,12 @@ Ksig=3
 positivityS = False
 positivityA = False
 
-DecGMCA_flag = False
+DecGMCA_flag = True
 MC_GMCA_flag = False
 GMCA_flag = False
 ForWaRD_GMCA_flag = False
 
+runtime = 0
 for db in dbArr:
     for n in nArr:
         drTest = 'test_CS/'
@@ -74,7 +76,7 @@ for db in dbArr:
         for j in np.arange(len(epsilon))[:1]:
             subdr = drNum+'epsilon_'+'%.e'% epsilon[j]+'/'
         
-            for r in np.arange(numTests)[1:]:
+            for r in np.arange(numTests):
                 
                 for pc in pcArr:
                     drReal = 'r'+str(r)+'_mask'+str(int(pc*100))+'_db'+str(int(db))+'/'                        
@@ -145,16 +147,14 @@ for db in dbArr:
                         V_N = np.dot(A,S_NhatMat)*MMat
                         
                         if DecGMCA_flag:
+                            start = time.time()
                             (S_est,A_est) = DecGMCA(V_N,MMat,n,Nx,Ny,Imax,epsilon[j],epsilonF,Ndim,wavelet=wavelet,scale=4,mask=mask,deconv=deconv,wname='starlet',thresStrtg=thresStrtg,FTPlane=FTPlane,fc=fc,logistic=logistic,postProc=postProc,postProcImax=postProcImax,Ksig=Ksig,positivityS=positivityS,positivityA=positivityA)
+                            end = time.time()
 
-                        elif MC_GMCA_flag and mask:
-                            Xe = SVTCompletion(V_N,M,n,1.5,1000)
-                            (S_est,A_est) = GMCA(Xe,n,Nx,Ny,Imax,Ndim,wavelet=True,scale=4,wname='starlet',thresStrtg=2,FTPlane=FTPlane,fc=fc,Ar=A)
-                        else:
-                            (S_est,A_est) = DecGMCA(V_N,MMat,n,Nx,Ny,Imax,epsilon[j],epsilonF,Ndim,wavelet=wavelet,scale=4,mask=mask,deconv=deconv,wname='starlet',thresStrtg=thresStrtg,FTPlane=FTPlane,fc=fc,logistic=logistic,postProc=2,postProcImax=postProcImax,Ksig=Ksig,positivityS=positivityS,positivityA=positivityA)
-            
+                        runtime += end-start
                         
                         fits.writeto(drResults+subdr+drReal+'estS_bd'+str(b)+'.fits',S_est,clobber=True)
                         fits.writeto(drResults+subdr+drReal+'estA_bd'+str(b)+'.fits',A_est,clobber=True)
 
+print runtime
 pylab.show()

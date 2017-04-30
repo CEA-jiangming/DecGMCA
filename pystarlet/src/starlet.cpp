@@ -40,8 +40,8 @@
 //#define test_index_period(ind ,Nind) ( ind >= Nind ? 2*Nind - ind - 2: ( ind < 0 ? -ind : ind) )
 #include <iostream>
 #include "starlet.h"
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
+//#include <gsl/gsl_rng.h>
+//#include <gsl/gsl_randist.h>
 #include "omp.h"
 
 
