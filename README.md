@@ -9,7 +9,7 @@ DecGMCA (Deconvolution Generalized Morphological Component Analysis) is a sparsi
 1. [Optimization](#opt)
 1. [Python DecGMCA package](#pyDecGMCA)
 1. [Installing](#install)
-1. [Exection](#exec)
+1. [Execution](#exec)
 1. [Authors](#authors)
 1. [Acknowledgments](#ack)
 
