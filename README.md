@@ -37,7 +37,7 @@ where p-norm is 0-norm or 1-norm.
 
 Challenges:
 1. As the above optimization is non-convex, only critical point can be expected.  
-2. Convolution kernel is ill-conditioned, leading to the unstability of the solution.
+1. Convolution kernel is ill-conditioned, leading to the unstability of the solution.
 
 The main idea of solution is based on alternating minimization but we do not directly apply alternating proximity-based algorithms due to its computational demanding. Our DecGMCA employs an alternating projected least-squares procedure to approach the critical point plus a proximity-based procedure to finally refine the solution. Thus, DecGMCA is structured as:
 - Intitialization
@@ -108,11 +108,11 @@ Among all packages, the Boost package is the most troublesome on MacOS. Here is 
 ```
 tar -xzvf boost_1_58_0.tar.gz
 ```
-- Inside the boost directory run the bootstrap.sh script specifying a path to where the libraries are to be installed as follows:
+- Inside the boost directory run the *bootstrap.sh* script specifying a path to where the libraries are to be installed as follows:
 ```
 ./bootstrap.sh --prefix=/opt/local/ --with-toolset=gcc
 ```
-- Run the b2 script as follows:
+- Run the *b2* script as follows:
 ```
 ./b2 install
 ```
@@ -120,39 +120,51 @@ tar -xzvf boost_1_58_0.tar.gz
 <a name="install"></a>
 ## Installing
 
-If all of the prerequisites are installed properly, one only needs to download the whole repository in his local machine.
+If all of the prerequisites are installed properly, one only needs to download the whole repository on his local machine.
 
 The package includes:
-- pyDecGMCA
-  - mathTools.py
-  - pyUtils.py
-  - algoDecG
-  - pyProx.py
-  - boost_Prox.py
-  - boost_algoDecG.py
-  - boost_utils.py
-- pyWavelet
-  - waveTools.py
-  - wav1d.py
-  - wav2d.py
-  - starlet_utils.py
-- simulationsTools
+- pyDecGMCA: main DecGMCA package
+  - mathTools.py: some useful mathematical operations
+  - pyUtils.py: useful routines such as two stages of update
+  - algoDecG.py: python DecGMCA algorithm
+  - pyProx.py: python proximal algorithms (used for the refinement step)
+  - boost_Prox.py: partially accelerated proximal algorithms
+  - boost_algoDecG.py: accelerated DecGMCA algorithm
+  - boost_utils.py: accelerated routines such as two stages of update. One needs to compile DecGMCA_utils previously.
+- pyWavelet: python wavelet tools
+  - waveTools.py: some operations for wavelet coefficients
+  - wav1d.py: 1D wavelet
+  - wav2d.py: 2D wavelet
+  - starlet_utils.py: accelerated starlet transform. One needs to compile pystarlet previously.
+- simulationsTools: used to generate sources for tests
   - MakeExperiment.py
-- simu_CS_deconv
-  - param.py
-  - test_CS.py
-  - test_deconv.py
-- evaluation
+- simu_CS_deconv: used for running tests
+  - param.py: global parameters for tests
+  - test_CS.py: test script for compressed sensing test
+  - test_deconv.py: test script for deconvolution test
+- evaluation: used to evaluate results, such as criteria A and S.
+  - evaluation.py
+
+The following packages are needed to interface python with C++
 - DecGMCA_utils
 - pystarlet
-
+Instructions for compilation (*e.g.* DecGMCA_utils):
+- Inside the DecGMCA_utils directory create a *build* dossier
+```
+mkdir build
+```
+- Inside the build directory and run
+```
+cmake ..
+make
+```
 <a name="exec"></a>
 ## Execution
 
 <a name="authors"></a>
 ## Authors
 
-* **Ming Jiang** *
+* **Ming Jiang**
 
 <a name="ack"></a>
 ## Acknowledgments
