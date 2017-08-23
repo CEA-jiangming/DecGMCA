@@ -148,6 +148,7 @@ The package includes:
 The following packages are needed to interface python with C++
 - DecGMCA_utils
 - pystarlet
+
 Instructions for compilation (*e.g.* DecGMCA_utils):
 - Inside the DecGMCA_utils directory create a *build* dossier
 ```
@@ -158,8 +159,20 @@ mkdir build
 cmake ..
 make
 ```
+Then a shared object **decG.so** is created. Please move this object to the directory *pyDecGMCA*. The same compilation goes with *pystarlet* as well. After the compilation, a shared object **starlet.so** should be moved to the directory *pyWavelet*.
+
 <a name="exec"></a>
 ## Execution
+
+Given correct parameters, one only needs to run the function *DecGMCA* located in *pyDecGMCA*.
+
+### Example
+Assume noised multichannel 1D data (in Fourier space, Fourier plane option (FTPlane) should be set **True**) is **V_N**, linear operator is **Mask** which downsamples the data points, the number of sources is **5**, the size of each source is **1** by **4096**. The number of iterations is set **500**, the initial epsilon for regularization is **10^{-1}** and the final epsilon is **10^{-4}**, the wavelet option is **True** with **starlet** wavelet and **4** scales of decomposition, the thresholding strategy is **2** with threshold **3**. To avoid that the low frequency data affect the sources separation quality, a high-pass filter is applied before the update of mixing matrix. The cut-off frequency of this high-pass filter is set **1./16** without logistic smoothness (**False**). Both of the positivity constraints are **False**. The refinement step (postProc) is **True** with max iterations **50** and parameter (Ksig) **3**.
+
+
+```
+(S_est,A_est) = DecGMCA(V_N,Mask,5,1,4096,500,1e-1,1e-4,Ndim=1,wavelet=True,scale=4,mask=True,deconv=False,wname='starlet',thresStrtg=2,FTPlane=True,fc=1./16,logistic=False,postProc=True,postProcImax=50,Kend=3.0,Ksig=3.0,positivityS=False,positivityA=False)
+```
 
 <a name="authors"></a>
 ## Authors
