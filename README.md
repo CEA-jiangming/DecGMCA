@@ -187,16 +187,16 @@ In the paper, we studied the performance of DecGMCA in terms of the sub-sampling
 
 - Remarks of parameters (in *param.py*):
 
-* pcArr: array of different ratios of present data (used for compressed sensing simulation)
-* ratioArr: array of different resolution ratios (used for deconvolution simulation)
-* nArr: array of number of sources
-* dbArr: array of different SNRs
-* bdArr: array of number of bands (channels)
-* numTests: number of Monte-Carlo tests
+  * pcArr: array of different ratios of present data (used for compressed sensing simulation)
+  * ratioArr: array of different resolution ratios (used for deconvolution simulation)
+  * nArr: array of number of sources
+  * dbArr: array of different SNRs
+  * bdArr: array of number of bands (channels)
+  * numTests: number of Monte-Carlo tests
 
 - Comparison with other methods
 The DecGMCA method is compared with other methods:
-* Matrix completion + BSS (GMCA): controled by the option *MC_GMCA_flag* in the script.
+  * Matrix completion + BSS (GMCA): controled by the option *MC_GMCA_flag* in the script.
 
 The results (mixing matrix A and source matrix S) of the simulation will be all saved in the same directory. In order to evaluate the quality of the results, one needs to go to the directory *evaluation* and run the script *script_CS.py*.
 
@@ -208,8 +208,8 @@ The design of this simulation has the same structure as the above one. In this p
 
 - Comparison with other methods
 The DecGMCA method is compared with other methods:
-* BSS alone (GMCA): controled by the option *GMCA_flag* in the script.
-* Sequential deconvolution (ForWaRD) and BSS (GMCA): controled by the option *ForWaRD_GMCA_flag* in the script.
+  * BSS alone (GMCA): controled by the option *GMCA_flag* in the script.
+  * Sequential deconvolution (ForWaRD) and BSS (GMCA): controled by the option *ForWaRD_GMCA_flag* in the script.
 
 The results (mixing matrix A and source matrix S) of the simulation will be all saved in the same directory. In order to evaluate the quality of the results, one needs to go to the directory *evaluation* and run the script *script_kernel.py*.
 
