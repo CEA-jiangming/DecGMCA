@@ -150,7 +150,7 @@ The following packages are needed to interface python with C++
 - pystarlet
 
 Instructions for compilation (*e.g.* DecGMCA_utils):
-- Inside the DecGMCA_utils directory create a *build* dossier
+- Inside the *DecGMCA_utils* directory create a *build* dossier
 ```
 mkdir build
 ```
@@ -167,12 +167,51 @@ Then a shared object **decG.so** is created. Please move this object to the dire
 Given correct parameters, one only needs to run the function *DecGMCA* located in *pyDecGMCA*.
 
 ### Example
+
 Assume noised multichannel 1D data (in Fourier space, Fourier plane option (FTPlane) should be set **True**) is **V_N**, linear operator is **Mask** which downsamples the data points, the number of sources is **5**, the size of each source is **1** by **4096**. The number of iterations is set **500**, the initial epsilon for regularization is **10^{-1}** and the final epsilon is **10^{-4}**, the wavelet option is **True** with **starlet** wavelet and **4** scales of decomposition, the thresholding strategy is **2** with threshold **3**. To avoid that the low frequency data affect the sources separation quality, a high-pass filter is applied before the update of mixing matrix. The cut-off frequency of this high-pass filter is set **1./16** without logistic smoothness (**False**). Both of the positivity constraints are **False**. The refinement step (postProc) is **True** with max iterations **50** and parameter (Ksig) **3**.
 
 
 ```
 (S_est,A_est) = DecGMCA(V_N,Mask,5,1,4096,500,1e-1,1e-4,Ndim=1,wavelet=True,scale=4,mask=True,deconv=False,wname='starlet',thresStrtg=2,FTPlane=True,fc=1./16,logistic=False,postProc=True,postProcImax=50,Kend=3.0,Ksig=3.0,positivityS=False,positivityA=False)
 ```
+
+### Run simulations
+
+This package consists of reproducible simulations presented in the paper. One needs to enter the directory *simu_CS_deconv* and run corresponding simulation scripts.
+
+#### Multichannel compressed sensing and blind source separation simulation
+
+This simulation corresponds to the case where H is a downsampling matrix.
+
+In the paper, we studied the performance of DecGMCA in terms of the sub-sampling effect, the number of sources, the SNR. One can change these parameters in the file *param.py*. To run the simulation, only need to run the script *test_CS.py*.
+
+- Remarks of parameters (in *param.py*):
+
+* pcArr: array of different ratios of present data (used for compressed sensing simulation)
+* ratioArr: array of different resolution ratios (used for deconvolution simulation)
+* nArr: array of number of sources
+* dbArr: array of different SNRs
+* bdArr: array of number of bands (channels)
+* numTests: number of Monte-Carlo tests
+
+- Comparison with other methods
+The DecGMCA method is compared with other methods:
+* Matrix completion + BSS (GMCA): controled by the option *MC_GMCA_flag* in the script.
+
+The results (mixing matrix A and source matrix S) of the simulation will be all saved in the same directory. In order to evaluate the quality of the results, one needs to go to the directory *evaluation* and run the script *script_CS.py*.
+
+#### Multichannel deconvolution and blind source separation simulation
+
+This simulation corresponds to the case where H is an ill-conditioned linear kernel (*e.g.* PSF).
+
+The design of this simulation has the same structure as the above one. In this part, we studied the performance of DecGMCA in terms of the resolution ratio (corresponding to the condition number of H), the number of sources, the SNR. Similarly, one can play with these parameters in the same file *param.py*. To run the simulation, only need to run the script *test_deconv.py*.
+
+- Comparison with other methods
+The DecGMCA method is compared with other methods:
+* BSS alone (GMCA): controled by the option *GMCA_flag* in the script.
+* Sequential deconvolution (ForWaRD) and BSS (GMCA): controled by the option *ForWaRD_GMCA_flag* in the script.
+
+The results (mixing matrix A and source matrix S) of the simulation will be all saved in the same directory. In order to evaluate the quality of the results, one needs to go to the directory *evaluation* and run the script *script_kernel.py*.
 
 <a name="authors"></a>
 ## Authors
