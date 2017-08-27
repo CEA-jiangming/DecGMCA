@@ -216,7 +216,7 @@ The results (mixing matrix A and source matrix S) of the simulation will be all 
 <a name="authors"></a>
 ## Authors
 
-* **Ming Jiang**
+* **Ming Jiang [leo.jiangming@gmail.com](mailto:leo.jiangming@gmail.com)**
 
 <a name="ack"></a>
 ## Acknowledgments
