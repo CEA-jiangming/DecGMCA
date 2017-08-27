@@ -2,7 +2,7 @@
 
 DecGMCA (Deconvolution Generalized Morphological Component Analysis) is a sparsity-based algorithm aiming at solving joint multichannel Deconvolution and Blind Source Separation (DBSS) problem.
 
-*For more details, one can refer to the paper **Joint Multichannel Deconvolution and Blind Source Separation** (https://arxiv.org/abs/1703.02650)*
+*For more details, please refer to the paper **Joint Multichannel Deconvolution and Blind Source Separation** (https://arxiv.org/abs/1703.02650)*
 
 ## Contents
 1. [Introduction](#intro)
