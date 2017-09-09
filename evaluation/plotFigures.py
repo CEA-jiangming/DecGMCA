@@ -4,7 +4,7 @@ Created on Feb 20, 2017
 @author: mjiang
 '''
 import numpy as np
-import pyfits as fits
+import astropy.io.fits as fits
 import matplotlib.pyplot as plt
 import pylab
 

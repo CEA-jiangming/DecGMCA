@@ -15,7 +15,7 @@ from pyWavelet.wav2d import *
 import os
 import glob
 import re
-import pyfits as fits
+import astropy.io.fits as fits
 import pyWavelet.waveTools as pm
 import sys
 

@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import numpy.linalg as LA
 import scipy.fftpack as scifft
-import pyfits as fits
+import astropy.io.fits as fits
 import pylab
 
 from mathTools import *
