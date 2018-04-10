@@ -5,6 +5,7 @@ Created on Nov 4, 2015
 '''
 import numpy as np
 import scipy.fftpack as scifft
+import numpy.linalg as LA
 
 def fftshift2d1d(cubefft):
     (nz,nx,ny) = np.shape(cubefft)
