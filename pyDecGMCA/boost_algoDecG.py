@@ -17,7 +17,7 @@ from pyWavelet.wav2d import *
 import pyWavelet.starlet_utils as starlet
 import pyWavelet.waveTools as pm
 from boost_utils import *
-from boost_prox import *
+from boost_Prox import *
 
 import sys
 import os
