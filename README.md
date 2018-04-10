@@ -20,9 +20,13 @@ Considering a multichannel DBSS problem:
 > Y = H \* ( AS ) + N
 
 Y: observation of size Nc by Np for an Nc-channel and Np-pixel imaging system.
+
 H: a linear convolution kernel of size Nc by Np (*e.g.* downsampling matrix, psf), often ill-conditioned in practice.
+
 A: unknown mixing matrix of size Nc by Ns, representing Ns sources are blindly linearly mixed (entities of row i represents the weighted contribution of sources at the given channel number i).
+
 S: sources of size Ns by Np, representing Ns sources of Np pixels (sources are aligned to row vectors).
+
 N: additional noise of size Nc by Np, supposed to be Gaussian.
 
 This problem can be conveniently written in **Fourier space**, which has a lot of interests in Fourier imaging systems such as radio interferometry, MRI, etc. In Fourier space, noticing the convolution is transformed to product and A is unchanged as its entities are actually scalar factors applied to sources, the problem is written as
