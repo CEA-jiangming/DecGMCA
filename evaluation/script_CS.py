@@ -1,8 +1,8 @@
-'''
+"""
 Created on Nov 25, 2015
 
 @author: mjiang
-'''
+"""
 import astropy.io.fits as fits
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,97 +14,101 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from simu_CS_deconv import param
 from evaluation import *
 
-epsilon=param.epsilon
+epsilon = param.epsilon
 # epsilon=1e-1
 # epsilon=1e-2
 # epsilon=1e-3
 # epsilon=1e-4
 # epsilon=0
 
-dbArr=param.dbArr
-nArr=param.nArr
+dbArr = param.dbArr
+nArr = param.nArr
 # db=np.array([60])
-rl=param.numTests
+rl = param.numTests
 pcArr = param.pcArr
 # bds=np.arange(5,26,5)
-bds=param.bdArr
-varArr=nArr
+bds = param.bdArr
+varArr = nArr
 # varArr=np.array([epsilon])
 
 drTest = '../simu_CS_deconv/test_CS/'
 # drTest = '../test/'
-drResult = drTest+'results_Prox/'
+drResult = drTest + 'results_Prox/'
 # drPostResult = drTest+'post_results/'
 # drResult = drTest+'results/'
-drMixture = drTest+'mixtures/'
-drSources = drTest+'sources/'
-drNoise = drTest+'noises/'
+drMixture = drTest + 'mixtures/'
+drSources = drTest + 'sources/'
+drNoise = drTest + 'noises/'
 
-drEvalResult = drTest+'eval_results/'
+drEvalResult = drTest + 'eval_results/'
 
-delta = np.zeros((len(dbArr),len(nArr),len(bds)))
-delta_rl = np.zeros((len(dbArr),len(nArr),len(bds),rl))
+delta = np.zeros((len(dbArr), len(nArr), len(bds)))
+delta_rl = np.zeros((len(dbArr), len(nArr), len(bds), rl))
 
-SDR = np.zeros((len(dbArr),len(nArr),len(bds)))
-SDR_rl = np.zeros((len(dbArr),len(nArr),len(bds),rl))
+SDR = np.zeros((len(dbArr), len(nArr), len(bds)))
+SDR_rl = np.zeros((len(dbArr), len(nArr), len(bds), rl))
 
-SIR = np.zeros((len(dbArr),len(nArr),len(bds)))
-SIR_rl = np.zeros((len(dbArr),len(nArr),len(bds),rl))
+SIR = np.zeros((len(dbArr), len(nArr), len(bds)))
+SIR_rl = np.zeros((len(dbArr), len(nArr), len(bds), rl))
 
-SNR = np.zeros((len(dbArr),len(nArr),len(bds)))
-SNR_rl = np.zeros((len(dbArr),len(nArr),len(bds),rl))
+SNR = np.zeros((len(dbArr), len(nArr), len(bds)))
+SNR_rl = np.zeros((len(dbArr), len(nArr), len(bds), rl))
 
-SAR = np.zeros((len(dbArr),len(nArr),len(bds)))
-SAR_rl = np.zeros((len(dbArr),len(nArr),len(bds),rl))
-
+SAR = np.zeros((len(dbArr), len(nArr), len(bds)))
+SAR_rl = np.zeros((len(dbArr), len(nArr), len(bds), rl))
 
 for db in np.arange(len(dbArr)):
     for n in np.arange(len(nArr)):
-#         subdr = 'n'+str(nArr[n])+'/epsilon_'+'%.e'% epsilon[0]+'_db_'+str(dbArr[0])+'_n'+str(n)+'/'
-        subdr = 'n'+str(varArr[n])+'/epsilon_'+'%.e'% epsilon[0] +'/'
-        drNum = 'n'+str(nArr[n])+'/'
-    #     subdr = drNum
-    #     if not os.path.exists(subdr):
-    #         os.makedirs(subdr)
+        # subdr = 'n' + str(nArr[n]) + '/epsilon_' + '%.e' % epsilon[0] + '_db_' + str(dbArr[0]) + '_n' + str(n) + '/'
+        subdr = 'n' + str(varArr[n]) + '/epsilon_' + '%.e' % epsilon[0] + '/'
+        drNum = 'n' + str(nArr[n]) + '/'
+        # subdr = drNum
+        # if not os.path.exists(subdr):
+        #     os.makedirs(subdr)
         for i in np.arange(len(bds)):
             for r in np.arange(rl):
-#                 rlpath='r'+str(r)+'_db'+str(dbArr[0])+'/'
-#                 rlpath='r'+str(r)+'_kernel_db'+str(db[0])+'/'
-                rlpath='r'+str(r)+'_mask'+str(int(pcArr[0]*100))+'_db'+str(dbArr[0])+'/'
-    #             rlpath='r'+str(r)+'/'
-    #             if not os.path.exists(subdr+rlpath):
-    #                 os.makedirs(subdr+rlpath)
-                AeName = drResult+subdr+rlpath+'estA_bd'+str(bds[i])+'.fits'
-    #             AeName = drResult+subdr+rlpath+'estA_post_anal_soft_bd'+str(bds[i])+'_Ksig'+str(varArr[j])+'_r'+str(r)+'.fits'
-    #             SeName = drResult+subdr+rlpath+'estS_post_anal_soft_bd'+str(bds[i])+'_Ksig1'+'_r'+str(r)+'.fits'
-                SeName = drResult+subdr+rlpath+'estS_bd'+str(bds[i])+'.fits'
-    #             SeName = drResult+subdr+rlpath+'estS_post_bd'+str(bds[i])+'_r'+str(r)+'.fits'
-    #             SeName = drPostResult+subdr+rlpath+'estS_post_condat_vu_soft_bd'+str(bds[i])+'_Ksig0.6'+'_r'+str(r)+'.fits'
-                noiseName = drNoise+drNum+rlpath+'noise_bd'+str(bds[i])+'.fits'
-                AName = drMixture+drNum+rlpath+'A_bd'+str(bds[i])+'.fits'
-                SName = drSources+drNum+rlpath+'S_bd'+str(bds[i])+'.fits'
+                # rlpath = 'r' + str(r) + '_db' + str(dbArr[0]) + '/'
+                # rlpath = 'r' + str(r) + '_kernel_db' + str(db[0]) + '/'
+                rlpath = 'r' + str(r) + '_mask' + str(int(pcArr[0] * 100)) + '_db' + str(dbArr[0]) + '/'
+                # rlpath = 'r' + str(r) + '/'
+                # if not os.path.exists(subdr + rlpath):
+                #     os.makedirs(subdr + rlpath)
+                AeName = drResult + subdr + rlpath + 'estA_bd' + str(bds[i]) + '.fits'
+                # AeName = drResult + subdr + rlpath + 'estA_post_anal_soft_bd' + str(bds[i]) + '_Ksig' + str(
+                #     varArr[j]) + '_r' + str(r) + '.fits'
+                # SeName = drResult + subdr + rlpath + 'estS_post_anal_soft_bd' + str(bds[i]) + '_Ksig1' + '_r' + str(
+                #     r) + '.fits'
+                SeName = drResult + subdr + rlpath + 'estS_bd' + str(bds[i]) + '.fits'
+                # SeName = drResult + subdr + rlpath + 'estS_post_bd' + str(bds[i]) + '_r' + str(r) + '.fits'
+                # SeName = drPostResult + subdr + rlpath + 'estS_post_condat_vu_soft_bd' + str(
+                #     bds[i]) + '_Ksig0.6' + '_r' + str(r) + '.fits'
+                noiseName = drNoise + drNum + rlpath + 'noise_bd' + str(bds[i]) + '.fits'
+                AName = drMixture + drNum + rlpath + 'A_bd' + str(bds[i]) + '.fits'
+                SName = drSources + drNum + rlpath + 'S_bd' + str(bds[i]) + '.fits'
                 Ae = fits.getdata(AeName)
                 A = fits.getdata(AName)
                 Se = fits.getdata(SeName)
-                Se = np.reshape(Se,(Se.shape[0],np.size(Se[0])))
+                Se = np.reshape(Se, (Se.shape[0], np.size(Se[0])))
                 S = fits.getdata(SName)
-                S = np.reshape(S,(S.shape[0],np.size(S[0])))
+                S = np.reshape(S, (S.shape[0], np.size(S[0])))
                 noise = fits.getdata(noiseName)
-    #             noise = fits.getdata(drNoise+'/n'+str(n)+'/noise_db'+str(db[0])+'_sigS'+str(sigS)+'_r'+str(r)+'.fits')
-                criteria, decomposition, delta_rl[db,n,i,r],Ae_ord,Se_ord = evaluation((Ae,Se), (A,S,noise), verbose=0)
-                
-                SDR_rl[db,n,i,r] = criteria['SDR_S']
-                SIR_rl[db,n,i,r] = criteria['SIR_S']
-                SNR_rl[db,n,i,r] = criteria['SNR_S']
-                SAR_rl[db,n,i,r] = criteria['SAR_S']
-                
-    #             deltaRl[j,i,r]=abs(abs(linalg.inv(Ae.T.dot(Ae)).dot(Ae.T).dot(A)) - np.eye(n)).sum() / (n*n)
-    #             fits.writeto(AeName,Ae_ord,clobber=True)
-    #             fits.writeto(SeName,Se_ord,clobber=True)
-                if not os.path.exists(drEvalResult+subdr+rlpath):
-                    os.makedirs(drEvalResult+subdr+rlpath) 
-                fits.writeto(drEvalResult+subdr+rlpath+'estA_bd'+str(bds[i])+'.fits',Ae_ord,clobber=True)
-                fits.writeto(drEvalResult+subdr+rlpath+'estS_bd'+str(bds[i])+'.fits',Se_ord,clobber=True)
+                # noise = fits.getdata(
+                #     drNoise + '/n' + str(n) + '/noise_db' + str(db[0]) + '_sigS' + str(sigS) + '_r' + str(r) + '.fits')
+                criteria, decomposition, delta_rl[db, n, i, r], Ae_ord, Se_ord = evaluation((Ae, Se), (A, S, noise),
+                                                                                            verbose=0)
+
+                SDR_rl[db, n, i, r] = criteria['SDR_S']
+                SIR_rl[db, n, i, r] = criteria['SIR_S']
+                SNR_rl[db, n, i, r] = criteria['SNR_S']
+                SAR_rl[db, n, i, r] = criteria['SAR_S']
+
+                # deltaRl[j, i, r] = abs(abs(linalg.inv(Ae.T.dot(Ae)).dot(Ae.T).dot(A)) - np.eye(n)).sum() / (n * n)
+                # fits.writeto(AeName, Ae_ord, clobber=True)
+                # fits.writeto(SeName, Se_ord, clobber=True)
+                if not os.path.exists(drEvalResult + subdr + rlpath):
+                    os.makedirs(drEvalResult + subdr + rlpath)
+                fits.writeto(drEvalResult + subdr + rlpath + 'estA_bd' + str(bds[i]) + '.fits', Ae_ord, clobber=True)
+                fits.writeto(drEvalResult + subdr + rlpath + 'estS_bd' + str(bds[i]) + '.fits', Se_ord, clobber=True)
 
 delta_rl = delta_rl.squeeze()
 
@@ -266,7 +270,7 @@ SAR_rl = SAR_rl.squeeze()
 # delta=evaluation((A45e,S45e), (A45,S45), verbose=0)
 # 
 
-print SDR_rl
-print np.log10(delta_rl)
+print(SDR_rl)
+print(np.log10(delta_rl))
 
 pylab.show()

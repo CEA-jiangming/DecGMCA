@@ -1,15 +1,16 @@
-'''
+"""
 Created on Nov 25, 2015
 
 @author: mjiang
-'''
+"""
 
 import numpy as np
 from scipy import linalg
-from munkres import munkres
+from evaluation.munkres import munkres
+
 
 def evaluation(result, reference, verbose=0):
-    r"""
+    """
     Evaluate BSS results using criteria from Vincent et al.
     This function reorders the sources and mixtures so as to match
     the reference factorization.
@@ -57,13 +58,13 @@ def evaluation(result, reference, verbose=0):
     Ae = Ae[:, indices]
     Se = Se[:, indices]
     # get reordered results
-#     Ae = result[0].copy()
-#     Ae[np.isnan(Ae)] = 0
-#     Se = result[1].T.copy()
-#     Se[np.isnan(Se)] = 0
-#     result_ordered = (Ae, Se)
+    # Ae = result[0].copy()
+    # Ae[np.isnan(Ae)] = 0
+    # Se = result[1].T.copy()
+    # Se[np.isnan(Se)] = 0
+    # result_ordered = (Ae, Se)
     # compute criteria
-    delta=abs(abs(linalg.inv(Ae.T.dot(Ae)).dot(Ae.T).dot(Ar)) - np.eye(r)).sum() / (r*r)
+    delta = abs(abs(linalg.inv(Ae.T.dot(Ae)).dot(Ae.T).dot(Ar)) - np.eye(r)).sum() / (r * r)
     criteria = {}
     # on S
     output = decomposition_criteria(Se, Sr, noise)
@@ -73,28 +74,28 @@ def evaluation(result, reference, verbose=0):
     criteria['SNR_S'] = output[0]['SNR']
     criteria['SAR_S'] = output[0]['SAR']
     # on A
-#     output = decomposition_criteria(Ae, Ar, reference['noise'])
-#     criteria['SDR_A'] = output[0]['SDR']
-#     criteria['SIR_A'] = output[0]['SIR']
-#     criteria['SNR_A'] = output[0]['SNR']
-#     criteria['SAR_A'] = output[0]['SAR']
-#     if verbose != 0:
-#         print("Results of the reconstruction:")
-#         print("Decomposition criteria on S:")
-#         print("    - Mean SDR: " + str(criteria['SDR_S']) + ".")
-#         print("    - Mean SIR: " + str(criteria['SIR_S']) + ".")
-#         print("    - Mean SNR: " + str(criteria['SNR_S']) + ".")
-#         print("    - Mean SAR: " + str(criteria['SAR_S']) + ".")
-#         print("Decomposition criteria on A:")
-#         print("    - Mean SDR: " + str(criteria['SDR_A']) + ".")
-#         print("    - Mean SIR: " + str(criteria['SIR_A']) + ".")
-#         print("    - Mean SNR: " + str(criteria['SNR_A']) + ".")
-#         print("    - Mean SAR: " + str(criteria['SAR_A']) + ".")
-    return (criteria, decomposition, delta,Ae,Se.T)
+    # output = decomposition_criteria(Ae, Ar, reference['noise'])
+    # criteria['SDR_A'] = output[0]['SDR']
+    # criteria['SIR_A'] = output[0]['SIR']
+    # criteria['SNR_A'] = output[0]['SNR']
+    # criteria['SAR_A'] = output[0]['SAR']
+    # if verbose != 0:
+    #     print("Results of the reconstruction:")
+    #     print("Decomposition criteria on S:")
+    #     print("    - Mean SDR: " + str(criteria['SDR_S']) + ".")
+    #     print("    - Mean SIR: " + str(criteria['SIR_S']) + ".")
+    #     print("    - Mean SNR: " + str(criteria['SNR_S']) + ".")
+    #     print("    - Mean SAR: " + str(criteria['SAR_S']) + ".")
+    #     print("Decomposition criteria on A:")
+    #     print("    - Mean SDR: " + str(criteria['SDR_A']) + ".")
+    #     print("    - Mean SIR: " + str(criteria['SIR_A']) + ".")
+    #     print("    - Mean SNR: " + str(criteria['SNR_A']) + ".")
+    #     print("    - Mean SAR: " + str(criteria['SAR_A']) + ".")
+    return criteria, decomposition, delta, Ae, Se.T
 
 
 def compute_sdr_matrix(X, Y):
-    r"""
+    """
     Computes the SDR of each couple reference/estimate sources.
     
     Inputs
@@ -126,6 +127,7 @@ def compute_sdr_matrix(X, Y):
             np.sum(targets * targets, 0), np.spacing(1))
         MSDR[n, :] = -10 * np.log10(norm_diff_2 / norm_targets_2)
     return MSDR
+
 
 def dim_norm(data, dim=0, norm_type=2):
     r"""
@@ -178,13 +180,13 @@ def decomposition_criteria(Se, Sr, noise):
     Sr = Sr / dim_norm(Sr, 0)
     pS = Sr.dot(np.linalg.lstsq(Sr, Se)[0])
     SN = np.hstack([Sr, noise])
-    #pSN = SN.dot(np.linalg.lstsq(SN, Se)[0])  # this crashes on MAC
+    # pSN = SN.dot(np.linalg.lstsq(SN, Se)[0])  # this crashes on MAC
     pSN = SN.dot(linalg.lstsq(SN, Se)[0])
     eps = np.spacing(1)
     # compute decompositions
     decomposition = {}
     # targets
-    decomposition['target'] = np.sum(Se * Sr, 0) * Sr   # Sr is normalized
+    decomposition['target'] = np.sum(Se * Sr, 0) * Sr  # Sr is normalized
     # interferences
     decomposition['interferences'] = pS - decomposition['target']
     # noise
@@ -195,8 +197,8 @@ def decomposition_criteria(Se, Sr, noise):
     criteria = {}
     # SDR: source to distortion ratio
     num = decomposition['target']
-    den = decomposition['interferences'] +\
-        (decomposition['noise'] + decomposition['artifacts'])
+    den = decomposition['interferences'] + \
+          (decomposition['noise'] + decomposition['artifacts'])
     norm_num_2 = np.sum(num * num, 0)
     norm_den_2 = np.sum(den * den, 0)
     criteria['SDR'] = np.mean(10 * np.log10(
@@ -223,8 +225,8 @@ def decomposition_criteria(Se, Sr, noise):
     # SAR: sources to artifacts ratio
     if (noise.shape[1] + Sr.shape[1] < Sr.shape[0]):
         # if noise + sources form a basis, there is no "artifacts"
-        num = decomposition['target'] +\
-            (decomposition['interferences'] + decomposition['noise'])
+        num = decomposition['target'] + \
+              (decomposition['interferences'] + decomposition['noise'])
         den = decomposition['artifacts']
         norm_num_2 = sum(num * num, 0)
         norm_den_2 = sum(den * den, 0)
@@ -232,4 +234,4 @@ def decomposition_criteria(Se, Sr, noise):
             np.maximum(norm_num_2, eps) / np.maximum(norm_den_2, eps)))
     else:
         criteria['SAR'] = np.inf
-    return (criteria, decomposition)
+    return criteria, decomposition
