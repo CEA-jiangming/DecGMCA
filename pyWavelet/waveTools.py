@@ -6,10 +6,6 @@ Created on Nov 27, 2015
 
 import numpy as np
 
-trHead = ''  # Transform head
-trTab = []  # Normalization table
-
-
 def mad(alpha, align=1):
     """
     @param alpha: input vector or matrix
@@ -26,7 +22,7 @@ def mad(alpha, align=1):
             alpha = alpha[np.newaxis, :]
         nz = np.size(alpha, axis=0)
         sigma = np.zeros(nz)
-        for i in np.arange(nz):
+        for i in range(nz):
             sigma[i] = np.median(np.abs(alpha[i] - np.median(alpha[i]))) / 0.6745
         alpha = np.squeeze(alpha)
     elif align == 2:
@@ -49,7 +45,7 @@ def softTh(alpha, thTab, weights=None, reweighted=False):
     nz = np.size(thTab)
     # print(weights.shape)
     # print(thTab.shape)
-    for i in np.arange(nz):
+    for i in range(nz):
         if not reweighted:
             (alpha[i])[abs(alpha[i]) <= thTab[i]] = 0
             (alpha[i])[alpha[i] > 0] -= thTab[i]
@@ -76,7 +72,7 @@ def hardTh(alpha, thTab, weights=None, reweighted=False):
     # print(thTab.shape)
     if np.ndim(alpha) == 1:
         alpha = alpha[np.newaxis, :]
-    for i in np.arange(nz):
+    for i in range(nz):
         if not reweighted:
             (alpha[i])[abs(alpha[i]) <= thTab[i]] = 0
         else:

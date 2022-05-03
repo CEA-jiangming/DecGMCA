@@ -5,19 +5,10 @@ Created on Oct 26, 2015
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
+import pyDecGMCA.mathTools as mtl
 import numpy.linalg as LA
-import scipy.fftpack as scifft
-import pylab
-from pyDecGMCA.mathTools import *
-from pyWavelet.wav1d import *
-from pyWavelet.wav2d import *
-import os
-import glob
-import re
-import astropy.io.fits as fits
-import pyWavelet.waveTools as pm
-import sys
+import pyWavelet.wav1d as wt1d
+import pyWavelet.wav2d as wt2d
 
 
 ##########################################################################
@@ -85,12 +76,13 @@ def update_S_prox_peusdo_anal(V, A, S, M, Nx, Ny, Ndim, Imax, mu, Ksig, mask, wa
 
     if wavelet:
         if wname == 'starlet':
-            pm.trHead = ''
-            gen2 = False
+            wav1d = wt1d.Starlet1D(nele=P, scale=scale, fast=True, gen2=False, normalization=True)
+            # pm.trHead = ''
+            # gen2 = False
     #         coarseScale = np.zeros((N, 1, P))
     #         wtTmp = np.zeros((N, scale, P))
     #         wt = np.zeros((N, scale - 1, P))
-    #         for sr in np.arange(N):
+    #         for sr in range(N):
     #             wtTmp[sr] = star1d(S[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
     #             coarseScale[sr] = np.copy(wtTmp[sr, -1])
     #             wt[sr] = np.copy(wtTmp[sr,:-1])
@@ -110,7 +102,7 @@ def update_S_prox_peusdo_anal(V, A, S, M, Nx, Ny, Ndim, Imax, mu, Ksig, mask, wa
 
     while it < Imax:
         if FTPlane:
-            Shat = fftNd1d(S, Ndim)
+            Shat = mtl.fftNd1d(S, Ndim)
         else:
             Shat = S
         if Ndim == 2:
@@ -120,7 +112,7 @@ def update_S_prox_peusdo_anal(V, A, S, M, Nx, Ny, Ndim, Imax, mu, Ksig, mask, wa
         rsd1 = np.dot(A.conj().transpose(), M * rsd)
 
         if FTPlane:
-            rsd1 = ifftNd1d(np.reshape(rsd1, (N, Nx, Ny)).squeeze(), Ndim)
+            rsd1 = mtl.ifftNd1d(np.reshape(rsd1, (N, Nx, Ny)).squeeze(), Ndim)
             rsd1 = np.real(rsd1)
             S_n = S + mu * np.reshape(rsd1, (N, Nx, Ny)).squeeze()
         else:
@@ -130,42 +122,42 @@ def update_S_prox_peusdo_anal(V, A, S, M, Nx, Ny, Ndim, Imax, mu, Ksig, mask, wa
             if wname == 'starlet':
                 rsdTr = np.zeros((N, scale, P))
                 wt = np.zeros((N, scale, P))
-                for sr in np.arange(N):
-                    rsdTr[sr] = star1d(rsd1[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
-                    wt[sr] = star1d(S_n[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
+                for sr in range(N):
+                    rsdTr[sr] = wav1d.decomposition(rsd1[sr])
+                    wt[sr] = wav1d.decomposition(S_n[sr])
                 coarseScale = wt[:, -1, :]
                 wt = np.delete(wt, -1, axis=1)
                 rsdTr = np.delete(rsdTr, -1, axis=1)
                 # Noise estimate
                 if thresStrtg == 1:
                     rsdTr = np.reshape(rsdTr, (N, np.size(rsdTr) / N)).squeeze()
-                    sig = mad(rsdTr[:, :P])
+                    sig = mtl.mad(rsdTr[:, :P])
                     # sig = np.array([0.01, 0.01])
                 elif thresStrtg == 2:
                     sig = np.zeros((N, scale - 1))
-                    for sr in np.arange(N):
+                    for sr in range(N):
                         # sig = mad(wt[:, :P])  # For starlet transform
-                        sig[sr] = mad(rsdTr[sr])
+                        sig[sr] = mtl.mad(rsdTr[sr])
 
                 if PALM:
-                    thTab = find_th(wt, P_min, sig, currentIter, globalImax, strategy=thresStrtg)
+                    thTab = mtl.find_th(wt, P_min, sig, currentIter, globalImax, strategy=thresStrtg)
                 else:
                     thTab = Ksig * sig
                     # thIter[it] = thTab
 
             # Thresholding in terms of percentage of significant coefficients
             if thresStrtg == 1:
-                hardTh(wt, thTab, weights=None, reweighted=False)
+                mtl.hardTh(wt, thTab, weights=None, reweighted=False)
                 # softTh(wt, thTab, weights=None, reweighted=False)
             elif thresStrtg == 2:
-                for sr in np.arange(N):
-                    hardTh(wt[sr], thTab[sr], weights=None, reweighted=False)
+                for sr in range(N):
+                    mtl.hardTh(wt[sr], thTab[sr], weights=None, reweighted=False)
                     # softTh(wt[sr], thTab[sr], weights=None, reweighted=False)
             wt = np.concatenate((wt, coarseScale[:, np.newaxis, :]), axis=1)
             # wt = np.reshape(wt, (N, np.size(wt) / (N * P), P))  # For undecimated wavelet transform
             if wname == 'starlet':
-                for sr in np.arange(N):
-                    S_n[sr] = istar1d(wt[sr], fast=True, gen2=gen2, normalization=True)
+                for sr in range(N):
+                    S_n[sr] = wav1d.reconstruction(wt[sr])
 
             if FISTA:
                 tn = (1. + np.sqrt(1 + 4 * t * t)) / 2
@@ -259,24 +251,26 @@ def update_S_prox_anal(V, A, S, M, Nx, Ny, Ndim, Imax, ImaxInt, mu, muInt, Ksig,
 
     if wavelet:
         if wname == 'starlet':
-            pm.trHead = ''
-            gen2 = False
+            # pm.trHead = ''
+            # gen2 = False
             # coarseScale = np.zeros((N, 1, P))
             if u is None:
                 if Ndim == 1:
+                    wav1d = wt1d.Starlet1D(nele=P, scale=scale, fast=True, gen2=False, normalization=True)
                     wt = np.zeros((N, scale - 1, P))
-                    for sr in np.arange(N):
-                        wtTmp = star1d(S[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
+                    for sr in range(N):
+                        wtTmp = wav1d.decomposition(S[sr])
                         wt[sr] = np.copy(wtTmp[:-1])
                 elif Ndim == 2:
+                    wav2d = wt2d.Starlet2D(nx=Nx, ny=Ny, scale=scale, fast=True, gen2=False, normalization=True)
                     wt = np.zeros((N, scale - 1, Nx, Ny))
-                    for sr in np.arange(N):
-                        wtTmp = star2d(S[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
+                    for sr in range(N):
+                        wtTmp = wav2d.decomposition(S[sr])
                         wt[sr] = np.copy(wtTmp[:-1])
                 wt = np.reshape(wt, (N, np.size(wt) / N))
-                sigTmp = mad(wt[:, :P])
+                sigTmp = mtl.mad(wt[:, :P])
                 u = np.zeros((N, (scale - 1) * P))
-                for sr in np.arange(N):
+                for sr in range(N):
                     ind = (np.abs(wt[sr]) - Ksig * muInt * sigTmp[sr] > 0)
                     u[sr][ind] = Ksig * muInt * sigTmp[sr] * np.sign(wt[sr][ind])
                 if Ndim == 1:
@@ -298,7 +292,7 @@ def update_S_prox_anal(V, A, S, M, Nx, Ny, Ndim, Imax, ImaxInt, mu, muInt, Ksig,
 
     while it < Imax and err > tol:
         if FTPlane:
-            Shat = fftNd1d(S, Ndim)
+            Shat = mtl.fftNd1d(S, Ndim)
         else:
             Shat = S
         if Ndim == 2:
@@ -307,55 +301,55 @@ def update_S_prox_anal(V, A, S, M, Nx, Ny, Ndim, Imax, ImaxInt, mu, muInt, Ksig,
         rsd1 = np.dot(A.conj().transpose(), M * rsd)
 
         if FTPlane:
-            rsd1 = ifftNd1d(np.reshape(rsd1, (N, Nx, Ny)).squeeze(), Ndim)
+            rsd1 = mtl.ifftNd1d(np.reshape(rsd1, (N, Nx, Ny)).squeeze(), Ndim)
             rsd1 = np.real(rsd1)
             S_n = S + mu * np.reshape(rsd1, (N, Nx, Ny)).squeeze()
         else:
             S_n = S + mu * np.reshape(rsd1, (N, Nx, Ny)).squeeze()
 
         rsdTr = np.zeros((N, scale, P))
-        for sr in np.arange(N):
-            rsdTr[sr] = star1d(rsd1[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
+        for sr in range(N):
+            rsdTr[sr] = wav1d.decomposition(rsd1[sr])
         rsdTr = np.delete(rsdTr, -1, axis=1)
         # Test for rigorous PALM
         if thresStrtg == 1 and sig is None:
             rsdTr = np.real(np.reshape(rsdTr, (N, np.size(rsdTr) / N)).squeeze())
-            sig = mad(mu * rsdTr[:, :P])
+            sig = mtl.mad(mu * rsdTr[:, :P])
         elif thresStrtg == 2 and sig is None:
             sig = np.zeros((N, scale - 1))
-            for sr in np.arange(N):
-                sig[sr] = mad(mu * rsdTr[sr])
+            for sr in range(N):
+                sig[sr] = mtl.mad(mu * rsdTr[sr])
 
         it_int = 0
         # Subiteration
         while it_int < ImaxInt:
             if wavelet:
                 if wname == 'starlet':
-                    for sr in np.arange(N):
-                        Stmp[sr] = adstar1d(u[sr], fast=True, gen2=gen2, normalization=True)
+                    for sr in range(N):
+                        Stmp[sr] = wav1d.adjoint(u[sr])
 
                     rsdInt = S_n - Stmp
                     rsdIntTr = np.zeros((N, scale, P))
-                    for sr in np.arange(N):
-                        rsdIntTr[sr] = star1d(rsdInt[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
+                    for sr in range(N):
+                        rsdIntTr[sr] = wav1d.decomposition(rsdInt[sr])
                     u_n = u + muInt * rsdIntTr
                     u_n = np.delete(u_n, -1, axis=1)
                     rsdIntTr = np.delete(rsdIntTr, -1, axis=1)
                     u_n1 = np.copy(u_n)
 
                     if PALM:
-                        thTab = find_th(u_n, P_min, sig, currentIter, globalImax, strategy=thresStrtg, Ksig=Ksig)
+                        thTab = mtl.find_th(u_n, P_min, sig, currentIter, globalImax, strategy=thresStrtg, Ksig=Ksig)
                     else:
                         thTab = Ksig * sig
                     thIter[it] = thTab
                     # Thresholding in terms of percentage of significant coefficients
                     if thresStrtg == 1:
                         # hardTh(wtTmp_n, thTab, weights=None, reweighted=False)
-                        softTh(u_n, thTab, weights=None, reweighted=False)
+                        mtl.softTh(u_n, thTab, weights=None, reweighted=False)
                     elif thresStrtg == 2:
-                        for sr in np.arange(N):
+                        for sr in range(N):
                             # hardTh(wtTmp_n[sr], thTab[sr], weights=None, reweighted=False)
-                            softTh(u_n[sr], thTab[sr], weights=None, reweighted=False)
+                            mtl.softTh(u_n[sr], thTab[sr], weights=None, reweighted=False)
                     u_n = u_n1 - u_n
                     u_n = np.reshape(u_n, (N, scale - 1, P))  # For undecimated wavelet transform
                     # wtTmp_n = np.concatenate((wtTmp_n, coarseScale), axis=1)
@@ -365,8 +359,8 @@ def update_S_prox_anal(V, A, S, M, Nx, Ny, Ndim, Imax, ImaxInt, mu, muInt, Ksig,
 
         if wavelet:
             if wname == 'starlet':
-                for sr in np.arange(N):
-                    Stmp[sr] = adstar1d(u[sr], fast=True, gen2=gen2, normalization=True)
+                for sr in range(N):
+                    Stmp[sr] = wav1d.adjoint(u[sr])
 
         S_n = S_n - Stmp
         err = (((S_n - S) ** 2).sum()) / ((S ** 2).sum())
@@ -452,23 +446,23 @@ def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wave
 
     if wavelet:
         if wname == 'starlet':
-            pm.trHead = ''
-            gen2 = False
             # coarseScale = np.zeros((N, 1, P))
             if Ndim == 1:
+                wav1d = wt1d.Starlet1D(nele=P, scale=scale, fast=True, gen2=False, normalization=True)
                 wt = np.zeros((N, scale - 1, P))
-                for sr in np.arange(N):
-                    wtTmp = star1d(S[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
+                for sr in range(N):
+                    wtTmp = wav1d.decomposition(S[sr])
                     wt[sr] = np.copy(wtTmp[:-1])
             elif Ndim == 2:
+                wav2d = wt2d.Starlet2D(nx=Nx, ny=Ny, scale=scale, fast=True, gen2=False, normalization=True)
                 wt = np.zeros((N, scale - 1, Nx, Ny))
-                for sr in np.arange(N):
-                    wtTmp = star2d(S[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
+                for sr in range(N):
+                    wtTmp = wav2d.decomposition(S[sr])
                     wt[sr] = np.copy(wtTmp[:-1])
-            wt = np.reshape(wt, (N, np.size(wt) / N))
-            sig = mad(wt[:, :P])
+            wt = np.reshape(wt, (N, np.size(wt) // N))
+            sig = mtl.mad(wt[:, :P])
             u = np.zeros((N, (scale - 1) * P))
-            for sr in np.arange(N):
+            for sr in range(N):
                 ind = (np.abs(wt[sr]) - tau * eta * Ksig * sig[sr] > 0)
                 u[sr][ind] = tau * eta * Ksig * sig[sr] * np.sign(wt[sr][ind])
             if Ndim == 1:
@@ -494,7 +488,7 @@ def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wave
 
     while it < Imax and err > tol:
         if FTPlane:
-            Shat = fftNd1d(S, Ndim)
+            Shat = mtl.fftNd1d(S, Ndim)
         else:
             Shat = S
         if Ndim == 2:
@@ -503,18 +497,18 @@ def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wave
         rsd1 = np.dot(A.conj().transpose(), H * rsd)
         Stmp = np.zeros_like(S)
         if wavelet:
-            for sr in np.arange(N):
+            for sr in range(N):
                 if Ndim == 1:
                     wtTmp = np.concatenate((u[sr], np.zeros((1, P))), axis=0)
-                    Stmp[sr] = adstar1d(wtTmp, fast=True, gen2=gen2, normalization=True)
+                    Stmp[sr] = wav1d.adjoint(wtTmp)
                 elif Ndim == 2:
                     wtTmp = np.concatenate((u[sr], np.zeros((1, Nx, Ny))), axis=0)
-                    Stmp[sr] = adstar2d(wtTmp, fast=True, gen2=gen2, normalization=True)
+                    Stmp[sr] = wav2d.adjoint(wtTmp)
         else:
             Stmp = u
 
         if FTPlane:
-            S_n = np.real(ifftNd1d(np.reshape(Shat + tau * rsd1, (N, Nx, Ny)).squeeze(), Ndim)) - tau * Stmp
+            S_n = np.real(mtl.ifftNd1d(np.reshape(Shat + tau * rsd1, (N, Nx, Ny)).squeeze(), Ndim)) - tau * Stmp
         else:
             S_n = np.reshape(Shat + tau * rsd1, (N, Nx, Ny)).squeeze() - tau * Stmp
 
@@ -528,41 +522,41 @@ def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wave
             elif Ndim == 2:
                 wtTmp = np.zeros((N, scale, Nx, Ny))
 
-            for sr in np.arange(N):
+            for sr in range(N):
                 if Ndim == 1:
-                    wtTmp[sr] = star1d(termQ1[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
+                    wtTmp[sr] = wav1d.decomposition(termQ1[sr])
                 elif Ndim == 2:
-                    wtTmp[sr] = star2d(termQ1[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
+                    wtTmp[sr] = wav2d.decomposition(termQ1[sr])
 
             wtTmp = np.delete(wtTmp, -1, axis=1)
             termQ1 = u + eta * wtTmp
             termQ2 = np.copy(termQ1)
             # Noise estimate
             if thresStrtg == 1:
-                wt = np.reshape(termQ2, (N, np.size(termQ2) / N))
-                sig = mad(termQ2[:, :P])
+                wt = np.reshape(termQ2, (N, np.size(termQ2) // N))
+                sig = mtl.mad(termQ2[:, :P])
                 # sig = np.array([0.01, 0.01])
             elif thresStrtg == 2:
                 sig = np.zeros((N, scale - 1))
-                wt = np.reshape(termQ2, (N, scale - 1, np.size(termQ2) / (N * (scale - 1))))
+                wt = np.reshape(termQ2, (N, scale - 1, np.size(termQ2) // (N * (scale - 1))))
                 # wtTmp = np.reshape(wtTmp, (N, scale - 1, np.size(termQ2) / (N * (scale - 1))))
-                for sr in np.arange(N):
+                for sr in range(N):
                     # sig = mad(wt[:, :P])  # For starlet transform
-                    sig[sr] = mad(wt[sr])
+                    sig[sr] = mtl.mad(wt[sr])
 
             if PALM:
-                thTab = find_th(wt, P_min, sig, currentIter, globalImax, strategy=thresStrtg, Ksig=tau * Ksig * eta)
+                thTab = mtl.find_th(wt, P_min, sig, currentIter, globalImax, strategy=thresStrtg, Ksig=tau * Ksig * eta)
             else:
                 thTab = tau * Ksig * eta * sig
             thIter[it] = thTab
             # Thresholding in terms of percentage of significant coefficients
             if thresStrtg == 1:
                 # hardTh(wtTmp_n, thTab, weights=None, reweighted=False)
-                softTh(wt, thTab, weights=None, reweighted=False)
+                mtl.softTh(wt, thTab, weights=None, reweighted=False)
             elif thresStrtg == 2:
-                for sr in np.arange(N):
+                for sr in range(N):
                     # hardTh(wtTmp_n[sr], thTab[sr], weights=None, reweighted=False)
-                    softTh(wt[sr], thTab[sr], weights=None, reweighted=False)
+                    mtl.softTh(wt[sr], thTab[sr], weights=None, reweighted=False)
             if Ndim == 1:
                 termQ2 = np.reshape(wt, (N, scale - 1, P))
             elif Ndim == 2:
@@ -571,12 +565,12 @@ def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wave
             termQ1 = u + eta * termQ1
             termQ2 = np.copy(termQ1)
             # Noise estimate
-            wt = np.reshape(termQ2, (N, np.size(termQ2) / N))
-            sig = mad(wt)
+            wt = np.reshape(termQ2, (N, np.size(termQ2) // N))
+            sig = mtl.mad(wt)
             thTab = Ksig * eta * sig
             thIter[it] = thTab
             # Thresholding in terms of percentage of significant coefficients
-            softTh(wt, thTab, weights=None, reweighted=False)
+            mtl.softTh(wt, thTab, weights=None, reweighted=False)
             if Ndim == 1:
                 termQ2 = np.reshape(wt, (N, P))
             elif Ndim == 2:
@@ -604,7 +598,7 @@ def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wave
     # fits.writeto('u.fits', u, clobber=True)
     # resWt = np.zeros((N, scale - 1, Nx, Ny))
     # rsd1 = np.real(ifftNd1d(np.reshape(rsd1, (N, Nx, Ny)).squeeze(), Ndim))
-    # for sr in np.arange(N):
+    # for sr in range(N):
     #     wtTmp = star2d(rsd1[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
     #     resWt[sr] = np.copy(wtTmp[:-1])
     # fits.writeto('res.fits',resWt,clobber=True)
@@ -683,7 +677,7 @@ def nearestCompletion(V, M):
 
     (Bd, P) = np.shape(V)
     V_comp = np.copy(V)
-    for nu in np.arange(Bd):
+    for nu in range(Bd):
         ind = tuple(np.where(M[nu, :] == 0)[0])
         for ele in ind:
             dist = 1
@@ -732,7 +726,7 @@ def SVTCompletion(X, M, n, delta, Nmax):
     Y = np.zeros_like(X)
     # thTab = np.zeros(Nmax)
 
-    for k in np.arange(Nmax):
+    for k in range(Nmax):
         Y = Y + delta * M * (X - M * Y)
         U, s, V = LA.svd(Y, full_matrices=False)
         if np.size(s) > n:

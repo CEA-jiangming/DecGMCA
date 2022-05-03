@@ -4,14 +4,10 @@ Created on Mar 30, 2015
 @author: mjiang
 """
 import numpy as np
-import scipy.signal as psg
 import scipy.fftpack as scifft
-import pyWavelet.waveTools as wavtl
-from pyWavelet.wav1d import *
+import scipy.signal as psg
+from pyWavelet import wav1d
 
-
-# from sparse import *
-# import sys
 
 def test_ind(ind, N):
     res = ind
@@ -35,16 +31,16 @@ def b3splineTrans(im_in, step):
 
     buff = np.zeros((nx, ny))
 
-    for i in np.arange(nx):
-        for j in np.arange(ny):
+    for i in range(nx):
+        for j in range(ny):
             jl = test_ind(j - step, ny)
             jr = test_ind(j + step, ny)
             jl2 = test_ind(j - 2 * step, ny)
             jr2 = test_ind(j + 2 * step, ny)
             buff[i, j] = c3 * im_in[i, j] + c2 * (im_in[i, jl] + im_in[i, jr]) + c1 * (im_in[i, jl2] + im_in[i, jr2])
 
-    for j in np.arange(ny):
-        for i in np.arange(nx):
+    for j in range(ny):
+        for i in range(nx):
             il = test_ind(i - step, nx)
             ir = test_ind(i + step, nx)
             il2 = test_ind(i - 2 * step, nx)
@@ -69,201 +65,346 @@ def b3spline_fast(step_hole):
     return kernel2d
 
 
-def star2d(im, scale, fast=True, gen2=True, normalization=False):
-    (nx, ny) = np.shape(im)
-    nz = scale
-    # Normalized transfromation
-    head = 'star2d_gen2' if gen2 else 'star2d_gen1'
-    trans = 1 if gen2 else 2
-    if wavtl.trHead != head:
-        wavtl.trHead = head
-    if normalization:
-        wavtl.trTab = nsNorm(nx, ny, nz, trans)
-    wt = np.zeros((nz, nx, ny))
-    step_hole = 1
-    im_in = np.copy(im)
+class Starlet2D(object):
+    """
+    Class of two-dimensional starlet
 
-    for i in np.arange(nz - 1):
-        if fast:
-            kernel2d = b3spline_fast(step_hole)
-            im_out = psg.convolve2d(im_in, kernel2d, boundary='symm', mode='same')
-        else:
-            im_out = b3splineTrans(im_in, step_hole)
+    List of atributes:
+    self.scale, self.nx, self.ny, self.fast, self.gen2, self.normalization, self.trTab
 
-        if gen2:
-            if fast:
-                im_aux = psg.convolve2d(im_out, kernel2d, boundary='symm', mode='same')
-            else:
-                im_aux = b3splineTrans(im_out, step_hole)
-            wt[i, :, :] = im_in - im_aux
-        else:
-            wt[i, :, :] = im_in - im_out
+    List of methods:
+    decomposition, reconstruction, adjoint
+    """
+    def __init__(self, nx, ny, scale, fast=True, gen2=False, normalization=False):
+        self.scale = scale
+        self.nx = nx
+        self.ny = ny
+        self.fast = fast
+        self.gen2 = gen2
+        self.normalization = normalization  # Normalization of the noise variance of each scale
+        im = np.zeros((nx, ny))
+        im[nx // 2, ny // 2] = 1
+        wt = self.decomposition(im, computewt=False)
+        tmp = wt ** 2
+        self.trTab = np.sqrt(np.sum(tmp, axis=(1, 2)))
 
-        if normalization:
-            wt[i, :, :] /= wavtl.trTab[i]
-        im_in = np.copy(im_out)
-        step_hole *= 2
+    def decomposition(self, im, computewt=True):
+        wt = np.zeros((self.scale, self.nx, self.ny))
+        step_hole = 1
+        im_in = np.copy(im)
 
-    wt[nz - 1, :, :] = np.copy(im_out)
-    if normalization:
-        wt[nz - 1, :, :] /= wavtl.trTab[nz - 1]
-
-    return wt
-
-
-def istar2d(wtOri, fast=True, gen2=True, normalization=False):
-    (nz, nx, ny) = np.shape(wtOri)
-    wt = np.copy(wtOri)
-    # Unnormalization step
-    head = 'star2d_gen2' if gen2 else 'star2d_gen1'
-    trans = 1 if gen2 else 2
-    if normalization:
-        if wavtl.trHead != head:
-            wavtl.trHead = head
-            wavtl.trTab = nsNorm(nx, ny, nz, trans)
-        for i in np.arange(nz):
-            wt[i, :, :] *= wavtl.trTab[i]
-
-    if gen2:
-        '''
-        h' = h, g' = Dirac
-        '''
-        step_hole = pow(2, nz - 2)
-        imRec = np.copy(wt[nz - 1, :, :])
-        for k in np.arange(nz - 2, -1, -1):
-            if fast:
+        for i in range(self.scale - 1):
+            if self.fast:
                 kernel2d = b3spline_fast(step_hole)
-                im_out = psg.convolve2d(imRec, kernel2d, boundary='symm', mode='same')
+                im_out = psg.convolve2d(im_in, kernel2d, boundary='symm', mode='same')
             else:
-                im_out = b3splineTrans(imRec, step_hole)
-            imRec = im_out + wt[k, :, :]
-            step_hole /= 2
-    else:
-        '''
-        h' = Dirac, g' = Dirac
-        '''
-        #         imRec = np.sum(wt,axis=0)
-        '''
-        h' = h, g' = Dirac + h
-        '''
-        imRec = np.copy(wt[nz - 1, :, :])
-        step_hole = pow(2, nz - 2)
-        for k in np.arange(nz - 2, -1, -1):
-            if fast:
+                im_out = b3splineTrans(im_in, step_hole)
+
+            if self.gen2:
+                if self.fast:
+                    im_aux = psg.convolve2d(im_out, kernel2d, boundary='symm', mode='same')
+                else:
+                    im_aux = b3splineTrans(im_out, step_hole)
+                wt[i] = im_in - im_aux
+            else:
+                wt[i] = im_in - im_out
+
+            if self.normalization and computewt:
+                wt[i] /= self.trTab[i]
+            im_in = np.copy(im_out)
+            step_hole *= 2
+
+        wt[self.scale - 1] = np.copy(im_out)
+        if self.normalization and computewt:
+            wt[self.scale - 1] /= self.trTab[self.scale - 1]
+
+        return wt
+
+    def reconstruction(self, coef):
+        if self.normalization:
+            wt = np.copy(coef)
+            for i in range(self.scale):
+                wt[i] *= self.trTab[i]
+        else:
+            wt = coef
+
+        if self.gen2:
+            '''
+            h' = h, g' = Dirac
+            '''
+            step_hole = pow(2, self.scale - 2)
+            im = np.copy(wt[self.scale - 1])
+            for k in range(self.scale - 2, -1, -1):
+                if self.fast:
+                    kernel2d = b3spline_fast(step_hole)
+                    im_out = psg.convolve2d(im, kernel2d, boundary='symm', mode='same')
+                else:
+                    im_out = b3splineTrans(im, step_hole)
+                im = im_out + wt[k]
+                step_hole //= 2
+        else:
+            '''
+            h' = Dirac, g' = Dirac
+            '''
+            #         im = np.sum(wt,axis=0)
+            '''
+            h' = h, g' = Dirac + h
+            '''
+            im = np.copy(wt[self.scale - 1])
+            step_hole = pow(2, self.scale - 2)
+            for k in range(self.scale - 2, -1, -1):
+                if self.fast:
+                    kernel2d = b3spline_fast(step_hole)
+                    im = psg.convolve2d(im, kernel2d, boundary='symm', mode='same')
+                    im_out = psg.convolve2d(wt[k], kernel2d, boundary='symm', mode='same')
+                else:
+                    im = b3splineTrans(im, step_hole)
+                    im_out = b3splineTrans(wt[k], step_hole)
+                im += wt[k] + im_out
+                step_hole //= 2
+        return im
+
+    def adjoint(self, coef):
+        if self.normalization:
+            wt = np.copy(coef)
+            for i in range(self.scale):
+                wt[i] *= self.trTab[i]
+        else:
+            wt = coef
+
+        im = np.copy(wt[self.scale - 1])
+        step_hole = pow(2, self.scale - 2)
+        for k in range(self.scale - 2, -1, -1):
+            if self.fast:
                 kernel2d = b3spline_fast(step_hole)
-                imRec = psg.convolve2d(imRec, kernel2d, boundary='symm', mode='same')
-                im_out = psg.convolve2d(wt[k, :, :], kernel2d, boundary='symm', mode='same')
+                im = psg.convolve2d(im, kernel2d, boundary='symm', mode='same')
+                im_out = psg.convolve2d(wt[k], kernel2d, boundary='symm', mode='same')
+                if self.gen2:
+                    im_out2 = psg.convolve2d(im_out, kernel2d, boundary='symm', mode='same')
+                    im += wt[k] - im_out2
+                else:
+                    im += wt[k] - im_out
             else:
-                imRec = b3splineTrans(imRec, step_hole)
-                im_out = b3splineTrans(wt[k, :, :], step_hole)
-            imRec += wt[k, :, :] + im_out
+                im = b3splineTrans(im, step_hole)
+                im_out = b3splineTrans(wt[k], step_hole)
+                if self.gen2:
+                    im_out2 = b3splineTrans(im_out, step_hole)
+                    im += wt[k] - im_out2
+                else:
+                    im += wt[k] - im_out
             step_hole //= 2
-    return imRec
+        return im
 
 
-def adstar2d(wtOri, fast=True, gen2=True, normalization=False):
-    (nz, nx, ny) = np.shape(wtOri)
-    wt = np.copy(wtOri)
-    # Unnormalization step
-    # !Attention: wt is not the original wt after unnormalization
-    head = 'star2d_gen2' if gen2 else 'star2d_gen1'
-    trans = 1 if gen2 else 2
-    if normalization:
-        if wavtl.trHead != head:
-            wavtl.trHead = head
-            wavtl.trTab = nsNorm(nx, ny, nz, trans)
-        for i in np.arange(nz):
-            wt[i, :, :] *= wavtl.trTab[i]
-
-    imRec = np.copy(wt[nz - 1, :, :])
-    step_hole = pow(2, nz - 2)
-    for k in np.arange(nz - 2, -1, -1):
-        if fast:
-            kernel2d = b3spline_fast(step_hole)
-            imRec = psg.convolve2d(imRec, kernel2d, boundary='symm', mode='same')
-            im_out = psg.convolve2d(wt[k, :, :], kernel2d, boundary='symm', mode='same')
-            if gen2:
-                im_out2 = psg.convolve2d(im_out, kernel2d, boundary='symm', mode='same')
-                imRec += wt[k, :, :] - im_out2
-            else:
-                imRec += wt[k, :, :] - im_out
-        else:
-            imRec = b3splineTrans(imRec, step_hole)
-            im_out = b3splineTrans(wt[k, :, :], step_hole)
-            if gen2:
-                im_out2 = b3splineTrans(im_out, step_hole)
-                imRec += wt[k, :, :] - im_out2
-            else:
-                imRec += wt[k, :, :] - im_out
-        step_hole /= 2
-    return imRec
-
-
-def nsNorm(nx, ny, nz, trans=1):
-    im = np.zeros((nx, ny))
-    im[nx // 2, ny // 2] = 1
-    if trans == 1:  # starlet transform 2nd generation
-        wt = star2d(im, nz, fast=True, gen2=True, normalization=False)
-        tmp = wt ** 2
-    elif trans == 2:  # starlet transform 1st generation
-        wt = star2d(im, nz, fast=True, gen2=False, normalization=False)
-        tmp = wt ** 2
-    tabNs = np.sqrt(np.sum(np.sum(tmp, 1), 1))
-    return tabNs
+# def star2d(im, scale, fast=True, gen2=True, normalization=False):
+#     (nx, ny) = np.shape(im)
+#     nz = scale
+#     # Normalized transfromation
+#     head = 'star2d_gen2' if gen2 else 'star2d_gen1'
+#     trans = 1 if gen2 else 2
+#     if wavtl.trHead != head:
+#         wavtl.trHead = head
+#     if normalization:
+#         wavtl.trTab = nsNorm(nx, ny, nz, trans)
+#     wt = np.zeros((nz, nx, ny))
+#     step_hole = 1
+#     im_in = np.copy(im)
+#
+#     for i in range(nz - 1):
+#         if fast:
+#             kernel2d = b3spline_fast(step_hole)
+#             im_out = psg.convolve2d(im_in, kernel2d, boundary='symm', mode='same')
+#         else:
+#             im_out = b3splineTrans(im_in, step_hole)
+#
+#         if gen2:
+#             if fast:
+#                 im_aux = psg.convolve2d(im_out, kernel2d, boundary='symm', mode='same')
+#             else:
+#                 im_aux = b3splineTrans(im_out, step_hole)
+#             wt[i, :, :] = im_in - im_aux
+#         else:
+#             wt[i, :, :] = im_in - im_out
+#
+#         if normalization:
+#             wt[i, :, :] /= wavtl.trTab[i]
+#         im_in = np.copy(im_out)
+#         step_hole *= 2
+#
+#     wt[nz - 1, :, :] = np.copy(im_out)
+#     if normalization:
+#         wt[nz - 1, :, :] /= wavtl.trTab[nz - 1]
+#
+#     return wt
+#
+#
+# def istar2d(wtOri, fast=True, gen2=True, normalization=False):
+#     (nz, nx, ny) = np.shape(wtOri)
+#     wt = np.copy(wtOri)
+#     # Unnormalization step
+#     head = 'star2d_gen2' if gen2 else 'star2d_gen1'
+#     trans = 1 if gen2 else 2
+#     if normalization:
+#         if wavtl.trHead != head:
+#             wavtl.trHead = head
+#             wavtl.trTab = nsNorm(nx, ny, nz, trans)
+#         for i in range(nz):
+#             wt[i, :, :] *= wavtl.trTab[i]
+#
+#     if gen2:
+#         '''
+#         h' = h, g' = Dirac
+#         '''
+#         step_hole = pow(2, nz - 2)
+#         imRec = np.copy(wt[nz - 1, :, :])
+#         for k in range(nz - 2, -1, -1):
+#             if fast:
+#                 kernel2d = b3spline_fast(step_hole)
+#                 im_out = psg.convolve2d(imRec, kernel2d, boundary='symm', mode='same')
+#             else:
+#                 im_out = b3splineTrans(imRec, step_hole)
+#             imRec = im_out + wt[k, :, :]
+#             step_hole /= 2
+#     else:
+#         '''
+#         h' = Dirac, g' = Dirac
+#         '''
+#         #         imRec = np.sum(wt,axis=0)
+#         '''
+#         h' = h, g' = Dirac + h
+#         '''
+#         imRec = np.copy(wt[nz - 1, :, :])
+#         step_hole = pow(2, nz - 2)
+#         for k in range(nz - 2, -1, -1):
+#             if fast:
+#                 kernel2d = b3spline_fast(step_hole)
+#                 imRec = psg.convolve2d(imRec, kernel2d, boundary='symm', mode='same')
+#                 im_out = psg.convolve2d(wt[k, :, :], kernel2d, boundary='symm', mode='same')
+#             else:
+#                 imRec = b3splineTrans(imRec, step_hole)
+#                 im_out = b3splineTrans(wt[k, :, :], step_hole)
+#             imRec += wt[k, :, :] + im_out
+#             step_hole /= 2
+#     return imRec
+#
+#
+# def adstar2d(wtOri, fast=True, gen2=True, normalization=False):
+#     (nz, nx, ny) = np.shape(wtOri)
+#     wt = np.copy(wtOri)
+#     # Unnormalization step
+#     # !Attention: wt is not the original wt after unnormalization
+#     head = 'star2d_gen2' if gen2 else 'star2d_gen1'
+#     trans = 1 if gen2 else 2
+#     if normalization:
+#         if wavtl.trHead != head:
+#             wavtl.trHead = head
+#             wavtl.trTab = nsNorm(nx, ny, nz, trans)
+#         for i in range(nz):
+#             wt[i, :, :] *= wavtl.trTab[i]
+#
+#     imRec = np.copy(wt[nz - 1, :, :])
+#     step_hole = pow(2, nz - 2)
+#     for k in range(nz - 2, -1, -1):
+#         if fast:
+#             kernel2d = b3spline_fast(step_hole)
+#             imRec = psg.convolve2d(imRec, kernel2d, boundary='symm', mode='same')
+#             im_out = psg.convolve2d(wt[k, :, :], kernel2d, boundary='symm', mode='same')
+#             if gen2:
+#                 im_out2 = psg.convolve2d(im_out, kernel2d, boundary='symm', mode='same')
+#                 imRec += wt[k, :, :] - im_out2
+#             else:
+#                 imRec += wt[k, :, :] - im_out
+#         else:
+#             imRec = b3splineTrans(imRec, step_hole)
+#             im_out = b3splineTrans(wt[k, :, :], step_hole)
+#             if gen2:
+#                 im_out2 = b3splineTrans(im_out, step_hole)
+#                 imRec += wt[k, :, :] - im_out2
+#             else:
+#                 imRec += wt[k, :, :] - im_out
+#         step_hole /= 2
+#     return imRec
+#
+#
+# def nsNorm(nx, ny, nz, trans=1):
+#     im = np.zeros((nx, ny))
+#     im[nx / 2, ny / 2] = 1
+#     if trans == 1:  # starlet transform 2nd generation
+#         wt = star2d(im, nz, fast=True, gen2=True, normalization=False)
+#         tmp = wt ** 2
+#     elif trans == 2:  # starlet transform 1st generation
+#         wt = star2d(im, nz, fast=True, gen2=False, normalization=False)
+#         tmp = wt ** 2
+#     tabNs = np.sqrt(np.sum(np.sum(tmp, 1), 1))
+#     return tabNs
 
 
 def pstar2d(im, nz, Niter, fast=True, gen2=True, hard=False, den=False):
+    """
+    Iteratively apply positivity constraint on (2nd generation) starlet coefficients
+    :param im: input image
+    :param nz: number of scales
+    :param Niter: number of iterations
+    :param fast: fast computation of starlet, default is True
+    :param gen2: second generation of starlet, default is True
+    :param hard: hard-thresholding, default is False, and soft-shresholding is used
+    :param den: the thresholding level is decided by noise level, otherwise decided by the peak coefficient.
+    default is False
+    :return: positive starlet coefficients
+    """
+    from pyDecGMCA import mathTools
     (nx, ny) = np.shape(im)
     rsd = np.copy(im)
-    wt = star2d(rsd, nz, fast, gen2, True)
+    star2d = Starlet2D(nx, ny, nz, fast, gen2, normalization=True)
+    wt = star2d.decomposition(rsd)
     mwt = wt.max()
     wt = np.zeros((nz, nx, ny))
 
-    for it in np.arange(Niter):
-        ld = mwt * (1. - (it + 1.) / Niter)
-        if ld < 0:
-            ld = 0
-        print
-        'lamda=' + str(ld)
-        tmp = star2d(rsd, nz, fast, gen2, True)
+    for it in range(Niter):
+        tmp = star2d.decomposition(rsd)
         wt += tmp
         if den:
-            noise = wavtl.mad(wt[0])
-            print
-            noise
-            wavtl.hardTh(wt, 3 * noise)
-        if hard:
-            wavtl.hardTh(wt, ld)
+            noise = mathTools.mad(wt[0])
+            print("sigma of noise: {}".format(noise))
+            if hard:
+                mathTools.hardTh(wt, 3 * noise)
+            else:
+                mathTools.softTh(wt, 3 * noise)
         else:
-            wavtl.softTh(wt, ld)
+            ld = mwt * (1. - (it + 1.) / Niter)
+            if ld < 0:
+                ld = 0
+            print('lamda=' + str(ld))
+            if hard:
+                mathTools.hardTh(wt, ld)
+            else:
+                mathTools.softTh(wt, ld)
         wt[wt < 0] = 0
-        rec = istar2d(wt, fast, gen2, True)
-        print(rec >= 0).all()
+        rec = star2d.reconstruction(wt)
+        print("Check whether the reconstructed image is non-negative: {}".format((rec >= 0).all()))
         rsd = im - rec
-        #         fits.writeto('pstar2d'+str(it)+'.fits',rsd,clobber=True)
-        print(np.abs(rsd)).sum()
+        print("Residual level: {}".format((np.abs(rsd)).sum()))
     return wt
 
 
-############################################################################################
+#########################
 # (Bi-)orthogonal wavelet
-############################################################################################
+#########################
 def dct2(im, type=2, n=None, norm=None):
     coef1 = scifft.dct(im, type=type, n=n, axis=0, norm=norm)
     coef = scifft.dct(coef1, type=type, n=n, axis=1, norm=norm)
     return coef
 
 
-def wavOrth2d(im, nz, wname='haar', wtype=1):
+def wavOrth2d(im, nz, wname='haar'):
     sx, sy = np.shape(im)
     scale = nz
     if scale > np.ceil(np.log2(sx)) + 1 or scale > np.ceil(np.log2(sy)) + 1:
-        print
-        "Too many decomposition scales! The decomposition scale will be set to default value: 1!"
+        print("Too many decomposition scales! The decomposition scale will be set to default value: 1!")
         scale = 1
-    if scale < 1:
-        print
-        "Decomposition scales should not be smaller than 1! The decomposition scale will be set to default value: 1!"
+    elif scale < 1:
+        print(
+            "Decomposition scales should not be smaller than 1! The decomposition scale will be set to default value: 1!")
         scale = 1
 
     band = np.zeros((scale + 1, len(np.shape(im))))
@@ -274,24 +415,24 @@ def wavOrth2d(im, nz, wname='haar', wtype=1):
     else:
         wtype = 2
 
-    (h0, g0) = wavFilters(wname, wtype, 'd')
+    (h0, g0) = wav1d.wavFilters(wname, wtype, 'd')
     lf = np.size(h0)
     wt = np.array([])
     start = np.array([1, 1])
 
-    for sc in np.arange(scale - 1):
+    for sc in range(scale - 1):
         end = np.array([sx + lf - 1, sy + lf - 1])
         lenExt = lf - 1
         imExtCol = np.lib.pad(im, ((0, 0), (lenExt, lenExt)), 'symmetric')  # Extension of columns
-        tmp = psg.convolve2d(imExtCol, h0[np.newaxis, :], 'valid')
-        im = convdown(tmp, h0[np.newaxis, :], lenExt, start, end)  # Approximation
-        hor = convdown(tmp, g0[np.newaxis, :], lenExt, start, end)  # Horizontal details
-        tmp = psg.convolve2d(imExtCol, g0[np.newaxis, :], 'valid')
-        vet = convdown(tmp, h0[np.newaxis, :], lenExt, start, end)  # Vertical details
-        dig = convdown(tmp, g0[np.newaxis, :], lenExt, start, end)  # Diagonal details
+        tmp = psg.convolve2d(imExtCol, h0[np.newaxis], 'valid')
+        im = convdown(tmp, h0[np.newaxis], lenExt, start, end)  # Approximation
+        hor = convdown(tmp, g0[np.newaxis], lenExt, start, end)  # Horizontal details
+        tmp = psg.convolve2d(imExtCol, g0[np.newaxis], 'valid')
+        vet = convdown(tmp, h0[np.newaxis], lenExt, start, end)  # Vertical details
+        dig = convdown(tmp, g0[np.newaxis], lenExt, start, end)  # Diagonal details
         wt = np.hstack([hor.flatten(), vet.flatten(), dig.flatten(), wt])
         sx, sy = np.shape(im)
-        band[-2 - sc] = np.array([sx, sy]).astype('int')
+        band[-2 - sc] = np.array([sx, sy])
     wt = np.hstack([im.flatten(), wt])
     band[0] = np.shape(im)
     return wt, band
@@ -306,7 +447,7 @@ def convdown(x, F, lenExt, start, end):
     return y
 
 
-def iwavOrth2d(wt, band, wname='haar', wtype=1):
+def iwavOrth2d(wt, band, wname='haar'):
     scale = np.size(band, axis=0) - 1
 
     if wname == 'haar' or wname == 'db1' or wname == 'db2' or wname == 'db3' or wname == 'db4' or wname == 'db5':
@@ -314,21 +455,19 @@ def iwavOrth2d(wt, band, wname='haar', wtype=1):
     else:
         wtype = 2
 
-    (h1, g1) = wavFilters(wname, wtype, 'r')
-    h1 = h1[np.newaxis, :]
-    g1 = g1[np.newaxis, :]
+    (h1, g1) = wav1d.wavFilters(wname, wtype, 'r')
+    h1 = h1[np.newaxis]
+    g1 = g1[np.newaxis]
 
     sx = band[0, 0]
     sy = band[0, 1]
 
     im = np.reshape(wt[:sx * sy], (sx, sy))
 
-    for sc in np.arange(scale - 1, 0, -1):
+    for sc in range(scale - 1, 0, -1):
         h, v, d = detcoef2('a', wt, band, sc)
-        im = upsconv2(im, h1, h1, band[scale - sc + 1]) + upsconv2(h, g1, h1, band[scale - sc + 1]) + upsconv2(v, h1,
-                                                                                                               g1, band[
-                                                                                                                   scale - sc + 1]) + upsconv2(
-            d, g1, g1, band[scale - sc + 1])
+        im = upsconv2(im, h1, h1, band[scale - sc + 1]) + upsconv2(h, g1, h1, band[scale - sc + 1]) + \
+             upsconv2(v, h1, g1, band[scale - sc + 1]) + upsconv2(d, g1, g1, band[scale - sc + 1])
     return im
 
 
@@ -343,9 +482,9 @@ def upsconv2(x, F, G, s):
     y = np.zeros((sx, 2 * sy - 1))
     y[:, ::2] = np.copy(ytmp)
     y = psg.convolve2d(y, G, 'full')
-    first = (int(np.floor(float(np.size(y, axis=0) - s[0]) / 2.)), int(np.floor(float(np.size(y, axis=1) - s[1]) / 2.)))
-    last = (int(np.size(y, axis=0) - np.ceil(float(np.size(y, axis=0) - s[0]) / 2.)),
-            int(np.size(y, axis=1) - np.ceil(float(np.size(y, axis=1) - s[1]) / 2.)))
+    first = (np.floor(float(np.size(y, axis=0) - s[0]) / 2.), np.floor(float(np.size(y, axis=1) - s[1]) / 2.))
+    last = (np.size(y, axis=0) - np.ceil(float(np.size(y, axis=0) - s[0]) / 2.),
+            np.size(y, axis=1) - np.ceil(float(np.size(y, axis=1) - s[1]) / 2.))
     y = y[first[0]:last[0], first[1]:last[1]]
     return y
 
@@ -353,8 +492,7 @@ def upsconv2(x, F, G, s):
 def detcoef2(o, wt, band, sc):
     nmax = np.size(band, axis=0) - 1
     if sc > nmax or sc < 0:
-        print
-        "The scale is not valid and will be set to default value: 1!"
+        print("The scale is not valid and will be set to default value: 1!")
         sc = 1
 
     k = np.size(band, axis=0) - sc - 1

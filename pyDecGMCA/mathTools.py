@@ -11,7 +11,7 @@ import numpy.linalg as LA
 def fftshift2d1d(cubefft):
     (nz, nx, ny) = np.shape(cubefft)
     cubefftSh = np.zeros((nz, nx, ny)) + np.zeros((nz, nx, ny)) * 1j  # Convert to complex array
-    for fm in np.arange(nz):
+    for fm in range(nz):
         cubefftSh[fm] = scifft.fftshift(cubefft[fm])
     return cubefftSh
 
@@ -19,7 +19,7 @@ def fftshift2d1d(cubefft):
 def ifftshift2d1d(cubefftSh):
     (nz, nx, ny) = np.shape(cubefftSh)
     cubefft = np.zeros((nz, nx, ny)) + np.zeros((nz, nx, ny)) * 1j  # Convert to complex array
-    for fm in np.arange(nz):
+    for fm in range(nz):
         cubefft[fm] = scifft.ifftshift(cubefftSh[fm])
     return cubefft
 
@@ -27,7 +27,7 @@ def ifftshift2d1d(cubefftSh):
 def fft2d1d(cube, shift=False):
     (nz, nx, ny) = np.shape(cube)
     cubefft = np.zeros((nz, nx, ny)) + np.zeros((nz, nx, ny)) * 1j  # Convert to complex array
-    for fm in np.arange(nz):
+    for fm in range(nz):
         if shift:
             cubefft[fm] = scifft.fft2(cube[fm])
         else:
@@ -38,7 +38,7 @@ def fft2d1d(cube, shift=False):
 def ifft2d1d(cubefft, shift=False):
     (nz, nx, ny) = np.shape(cubefft)
     cube = np.zeros((nz, nx, ny)) + np.zeros((nz, nx, ny)) * 1j  # Convert to complex array
-    for fm in np.arange(nz):
+    for fm in range(nz):
         if shift:
             cube[fm] = scifft.ifft2(cubefft[fm])
         else:
@@ -53,7 +53,7 @@ def fftshiftNd1d(imagefft, N):
     if N == 2:
         (nz, nx, ny) = np.shape(imagefft)
         imagefftSh = np.zeros((nz, nx, ny)) + np.zeros((nz, nx, ny)) * 1j  # Convert to complex array
-    for fm in np.arange(nz):
+    for fm in range(nz):
         imagefftSh[fm] = scifft.fftshift(imagefft[fm])
     return imagefftSh
 
@@ -65,7 +65,7 @@ def ifftshiftNd1d(imagefftSh, N):
     if N == 2:
         (nz, nx, ny) = np.shape(imagefftSh)
         imagefft = np.zeros((nz, nx, ny)) + np.zeros((nz, nx, ny)) * 1j  # Convert to complex array
-    for fm in np.arange(nz):
+    for fm in range(nz):
         imagefft[fm] = scifft.ifftshift(imagefftSh[fm])
     return imagefft
 
@@ -77,7 +77,7 @@ def fftNd1d(image, N, shift=False):
     if N == 2:
         (nz, nx, ny) = np.shape(image)
         imagefft = np.zeros((nz, nx, ny)) + np.zeros((nz, nx, ny)) * 1j  # Convert to complex array
-    for fm in np.arange(nz):
+    for fm in range(nz):
         if N == 1:
             if shift:
                 imagefft[fm] = scifft.fft(image[fm])
@@ -98,7 +98,7 @@ def ifftNd1d(imagefft, N, shift=False):
     if N == 2:
         (nz, nx, ny) = np.shape(imagefft)
         image = np.zeros((nz, nx, ny)) + np.zeros((nz, nx, ny)) * 1j  # Convert to complex array
-    for fm in np.arange(nz):
+    for fm in range(nz):
         if N == 1:
             if shift:
                 image[fm] = scifft.ifft(imagefft[fm])
@@ -122,7 +122,7 @@ def mad(alpha):
     #         alpha = alpha.reshape(1,nx,ny)
     nz = np.size(alpha, axis=0)
     sigma = np.zeros(nz)
-    for i in np.arange(nz):
+    for i in range(nz):
         sigma[i] = np.median(np.abs(alpha[i] - np.median(alpha[i]))) / 0.6745
     alpha = np.squeeze(alpha)
     return sigma
@@ -132,7 +132,7 @@ def softTh(alpha, thTab, weights=None, reweighted=False):
     nz = np.size(thTab)
     #     print weights.shape
     #     print thTab.shape
-    for i in np.arange(nz):
+    for i in range(nz):
         if not reweighted:
             (alpha[i])[abs(alpha[i]) <= thTab[i]] = 0
             (alpha[i])[alpha[i] > 0] -= thTab[i]
@@ -149,7 +149,7 @@ def hardTh(alpha, thTab, weights=None, reweighted=False):
     #     print thTab.shape
     if np.ndim(alpha) == 1:
         alpha = alpha[np.newaxis, :]
-    for i in np.arange(nz):
+    for i in range(nz):
         if not reweighted:
             (alpha[i])[abs(alpha[i]) <= thTab[i]] = 0
         else:
@@ -281,7 +281,7 @@ def find_th(S, P_min, sig, it, Imax, strategy=2, Ksig=3):
         n = np.size(S, axis=0)
         th = np.zeros(n)
 
-        for i in np.arange(n):
+        for i in range(n):
             # Order the pixels
             Stmp = np.reshape(S[i], np.size(S[i]))
             Stmp_sort = np.sort(abs(Stmp))[::-1]  # Descending order of coefficients
@@ -300,9 +300,9 @@ def find_th(S, P_min, sig, it, Imax, strategy=2, Ksig=3):
         n = np.size(S, axis=0)
         sc = np.size(S, axis=1)
         th = np.zeros((n, sc))
-        for i in np.arange(n):
+        for i in range(n):
             Stmp = np.reshape(S[i], (sc, np.size(S[i]) // sc))
-            for l in np.arange(sc):
+            for l in range(sc):
                 Stmp_sort = np.sort(abs(Stmp[l]))[::-1]  # Descending order of coefficients
                 Stmp_sort_sig = Stmp_sort[Stmp_sort > Ksig * sig[i, l]]  # Compared with K-sigma
                 P_ind = P_min + (1.0 - P_min) / (Imax - 1) * it  # Current percentage
@@ -332,7 +332,7 @@ def DeconvFwd(V, kern, epsilon):
     """
     (Bd, N) = np.shape(kern)
     X = np.zeros_like(V)
-    for nu in np.arange(Bd):
+    for nu in range(Bd):
         denom = kern[nu].conj() * kern[nu]
         rho = np.max(denom)
         denom = denom + epsilon * max(rho, 1e-4) * np.ones(N)
@@ -358,7 +358,7 @@ def nearestCompletion(V, M):
     """
     (Bd, P) = np.shape(V)
     V_comp = np.copy(V)
-    for nu in np.arange(Bd):
+    for nu in range(Bd):
         ind = tuple(np.where(M[nu, :] == 0)[0])
         for ele in ind:
             dist = 1
@@ -406,7 +406,7 @@ def SVTCompletion(X, M, n, delta, Nmax):
     Y = np.zeros_like(X)
     #     thTab = np.zeros(Nmax)
 
-    for k in np.arange(Nmax):
+    for k in range(Nmax):
         Y = Y + delta * M * (X - M * Y)
         U, s, V = LA.svd(Y, full_matrices=False)
         if np.size(s) > n:

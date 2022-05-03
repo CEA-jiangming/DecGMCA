@@ -99,18 +99,18 @@ def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wave
 
             # if Ndim == 1:
             #     wt = np.zeros((N, scale - 1, P))
-            #     for sr in np.arange(N):
+            #     for sr in range(N):
             #         wtTmp = star1d(S[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
             #         wt[sr] = np.copy(wtTmp[:-1])
             # elif Ndim == 2:
             #     wt = np.zeros((N, scale - 1, Nx, Ny))
-            #     for sr in np.arange(N):
+            #     for sr in range(N):
             #         wtTmp = star2d(S[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
             #         wt[sr] = np.copy(wtTmp[:-1])
             wt = np.reshape(wt, (N, np.size(wt) / N))
             sig = mad(wt[:, :P])
             u = np.zeros((N, (scale - 1) * P))
-            for sr in np.arange(N):
+            for sr in range(N):
                 ind = (np.abs(wt[sr]) - tau * eta * Ksig * sig[sr] > 0)
                 u[sr][ind] = tau * eta * Ksig * sig[sr] * np.sign(wt[sr][ind])
             if Ndim == 1:
@@ -152,7 +152,7 @@ def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wave
                 wtTmp = np.concatenate((u, np.zeros((N, 1, Nx, Ny))), axis=1)
                 wt = starlet.Nadstar2d(wtTmp, gen2=gen2, normalization=True)
 
-            # for sr in np.arange(N):
+            # for sr in range(N):
             #     if Ndim == 1:
             #         wtTmp = np.concatenate((u[sr], np.zeros((1, P))), axis=0)
             #         Stmp[sr] = adstar1d(wtTmp, fast=True, gen2=gen2, normalization=True)
@@ -177,7 +177,7 @@ def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wave
             # elif Ndim == 2:
             #     wtTmp = np.zeros((N, scale, Nx, Ny))
             #
-            # for sr in np.arange(N):
+            # for sr in range(N):
             #     if Ndim == 1:
             #         wtTmp[sr] = star1d(termQ1[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
             #     elif Ndim == 2:
@@ -200,7 +200,7 @@ def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wave
                 sig = np.zeros((N, scale - 1))
                 wt = np.reshape(termQ2, (N, scale - 1, np.size(termQ2) / (N * (scale - 1))))
                 # wtTmp = np.reshape(wtTmp, (N, scale - 1, np.size(termQ2) / (N * (scale - 1))))
-                for sr in np.arange(N):
+                for sr in range(N):
                     # sig = mad(wt[:, :P])  # For starlet transform
                     sig[sr] = mad(wt[sr])
 
@@ -214,7 +214,7 @@ def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wave
                 # hardTh(wtTmp_n, thTab, weights=None, reweighted=False)
                 softTh(wt, thTab, weights=None, reweighted=False)
             elif thresStrtg == 2:
-                for sr in np.arange(N):
+                for sr in range(N):
                     # hardTh(wtTmp_n[sr], thTab[sr], weights=None, reweighted=False)
                     softTh(wt[sr], thTab[sr], weights=None, reweighted=False)
             if Ndim == 1:
@@ -258,7 +258,7 @@ def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wave
     # fits.writeto('u.fits', u, clobber=True)
     # resWt = np.zeros((N, scale - 1, Nx, Ny))
     # rsd1 = np.real(ifftNd1d(np.reshape(rsd1, (N, Nx, Ny)).squeeze(), Ndim))
-    # for sr in np.arange(N):
+    # for sr in range(N):
     #     wtTmp = star2d(rsd1[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
     #     resWt[sr] = np.copy(wtTmp[:-1])
     # fits.writeto('res.fits',resWt,clobber=True)

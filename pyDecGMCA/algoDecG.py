@@ -12,8 +12,8 @@ import astropy.io.fits as fits
 import pylab
 
 from pyDecGMCA.mathTools import *
-from pyWavelet.wav1d import *
-from pyWavelet.wav2d import *
+import pyWavelet.wav1d as wt1d
+import pyWavelet.wav2d as wt2d
 import pyWavelet.waveTools as pm
 from pyDecGMCA.pyUtils import *
 from pyDecGMCA.pyProx import *
@@ -85,16 +85,16 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
     """
 
     (Bd, P) = np.shape(V)
-    # Matrix completion for initilize A
+    # Matrix completion to initialize A
     if Ndim == 1 and FTPlane:
         V_Hi = filter_Hi(ifftshiftNd1d(V, Ndim), Ndim, fc)
         if logistic:
             fc_pass = 2 * fc
             steep = 0.1 / 32 / fc
             flogist1 = 1. / (1 + np.exp(
-                -steep * np.linspace(-(fc_pass * P - fc * P) / 2, (fc_pass * P - fc * P) / 2, fc_pass * P - fc * P)))
+                -steep * np.linspace(-(fc_pass * P - fc * P) / 2, (fc_pass * P - fc * P) / 2, int(fc_pass * P - fc * P))))
             flogist2 = 1. / (1 + np.exp(
-                steep * np.linspace(-(fc_pass * P - fc * P) / 2, (fc_pass * P - fc * P) / 2, fc_pass * P - fc * P)))
+                steep * np.linspace(-(fc_pass * P - fc * P) / 2, (fc_pass * P - fc * P) / 2, int(fc_pass * P - fc * P))))
             V_Hi[:, int(fc * P):int(fc_pass * P)] = V_Hi[:, int(fc * P):int(fc_pass * P)] * flogist1
             V_Hi[:, int(-fc_pass * P):int(-fc * P)] = V_Hi[:, int(-fc_pass * P):int(-fc * P)] * flogist2
         V_Hi = fftshiftNd1d(V_Hi, Ndim)
@@ -127,12 +127,17 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
 
     # Save information of wavelet (Starlet and DCT only)
     if wavelet:
-        pm.trHead = ''
         if wname == 'starlet':
-            gen2 = False
-            pm.trHead = 'star' + str(int(Ndim)) + 'd_gen2' if gen2 else 'star' + str(int(Ndim)) + 'd_gen1'
-        else:
-            pm.trHead = wname + '_' + str(int(Ndim)) + 'd'
+            if Ndim == 1:
+                starlet1d = wt1d.Starlet1D(nele=P, scale=scale, fast=True, gen2=False, normalization=True)
+            elif Ndim == 2:
+                starlet2d = wt2d.Starlet2D(nx=Nx, ny=Ny, scale=scale, fast=True, gen2=False, normalization=True)
+        # pm.trHead = ''
+        # if wname == 'starlet':
+        #     gen2 = False
+        #     pm.trHead = 'star' + str(int(Ndim)) + 'd_gen2' if gen2 else 'star' + str(int(Ndim)) + 'd_gen1'
+        # else:
+        #     pm.trHead = wname + '_' + str(int(Ndim)) + 'd'
 
     if thresStrtg == 1:
         thIter = np.zeros((Imax, n))  # Stock of thresholding in terms of iteration
@@ -150,7 +155,7 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
 
     print("Main cycle")
 
-    for i in np.arange(Imax):
+    for i in range(Imax):
         if mask or deconv:
             epsilon_iter = 10 ** (epsilon_log - (epsilon_log - epsilonF_log) * float(i) / (
                         Imax - 1))  # Exponential linearly decreased
@@ -159,7 +164,7 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
             epsilon_iter = epsilon
 
         Shat = update_S(V, A, M, mask=mask, deconv=deconv, epsilon=epsilon_iter)
-        Shat[np.isnan(Shat)] = 0 + 0j
+        Shat[np.isnan(Shat)] = np.zeros(1).astype('complex64')
         #             Shat = update_S(Xe,A,M,mask=mask,epsilon=epsilon_iter)
         #         Shat = np.dot(LA.inv(np.dot(A.T,A)),np.dot(A.T,V))
         if FTPlane:
@@ -181,11 +186,11 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
                 elif Ndim == 2:
                     coarseScale = np.zeros((n, 1, Nx, Ny))
                     wt = np.zeros((n, scale - 1, Nx, Ny))  # For starlet transform
-                for sr in np.arange(n):
+                for sr in range(n):
                     if Ndim == 1:
-                        wtTmp = star1d(S[sr], scale=scale, gen2=gen2, normalization=True)  # 1d Starlet transform
+                        wtTmp = starlet1d.decomposition(S[sr])          # 1d Starlet transform
                     elif Ndim == 2:
-                        wtTmp = star2d(S[sr], scale=scale, gen2=gen2, normalization=True)  # 2d Starlet transform
+                        wtTmp = starlet2d.decomposition(S[sr])            # 2d Starlet transform
                     # Remove coarse scale
                     coarseScale[sr] = np.copy(wtTmp[-1])
                     wt[sr] = np.copy(wtTmp[:-1])
@@ -193,13 +198,13 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
             elif wname == 'dct':
                 wt = np.zeros((n, Nx, Ny)).squeeze()
                 coarseScale = np.zeros((n, Nx, Ny)).squeeze()
-                for sr in np.arange(n):
+                for sr in range(n):
                     if Ndim == 1:
                         wt[sr] = scifft.dct(S[sr], type=2, norm='ortho')
                         coarseScale[sr, :Ny / 16] = wt[sr, :Ny / 16]
                         wt[sr, :Ny / 16] = 0
                     elif Ndim == 2:
-                        wt[sr] = dct2(S[sr], type=2, norm='ortho')
+                        wt[sr] = wt2d.dct2(S[sr], type=2, norm='ortho')
                         coarseScale[sr, :Nx / 16, :Ny / 16] = wt[sr, :Nx / 16, :Ny / 16]
                         wt[sr, :Nx / 16, :Ny / 16] = 0
             # Noise estimate
@@ -207,11 +212,11 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
                 if wname == 'dct':
                     # Use the finest scale of starlet to estimate noise level
                     fineScale = np.zeros((n, P))
-                    for sr in np.arange(n):
+                    for sr in range(n):
                         if Ndim == 1:
-                            wtTmp = star1d(S[sr], scale=4, gen2=False, normalization=True)  # 1d Starlet transform
+                            wtTmp = starlet1d.decomposition(S[sr])                # 1d Starlet transform
                         elif Ndim == 2:
-                            wtTmp = star2d(S[sr], scale=4, gen2=False, normalization=True)  # 2d Starlet transform
+                            wtTmp = starlet2d.decomposition(S[sr])                  # 2d Starlet transform
                         fineScale[sr] = wtTmp[0].flatten()
                     sig = mad(fineScale)
                 else:
@@ -220,7 +225,7 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
                     # sig = np.array([0.01, 0.01])
             elif thresStrtg == 2:
                 sig = np.zeros((n, scale - 1))
-                for sr in np.arange(n):
+                for sr in range(n):
                     # sig = mad(wt[:,:P])                                             # For starlet transform
                     sig[sr] = mad(wt[sr])
 
@@ -233,7 +238,7 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
                 hardTh(wt, thTab, weights=None, reweighted=False)
                 # softTh(wt, thTab, weights=None, reweighted=False)
             elif thresStrtg == 2:
-                for sr in np.arange(n):
+                for sr in range(n):
                     hardTh(wt[sr], thTab[sr], weights=None, reweighted=False)
                     # softTh(wt[sr], thTab[sr], weights=None, reweighted=False)
 
@@ -246,21 +251,21 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
                 wt = wt.reshape((n, Nx, Ny)).squeeze()
 
             if wname == 'starlet':
-                for sr in np.arange(n):
+                for sr in range(n):
                     wtTmp = np.concatenate((wt[sr], coarseScale[sr]), axis=0)
                     if Ndim == 1:
-                        S[sr] = istar1d(wtTmp, fast=True, gen2=gen2, normalization=True)  # Inverse starlet transform
+                        S[sr] = starlet1d.reconstruction(wtTmp)  # Inverse starlet transform
                     elif Ndim == 2:
-                        S[sr] = istar2d(wtTmp, fast=True, gen2=gen2, normalization=True)  # Inverse starlet transform
+                        S[sr] = starlet2d.reconstruction(wtTmp)  # Inverse starlet transform
 
             elif wname == 'dct':
-                for sr in np.arange(n):
+                for sr in range(n):
                     if Ndim == 1:
                         wt[sr, :Ny / 16] = coarseScale[sr, :Ny / 16]
                         S[sr] = scifft.dct(wt[sr], type=3, norm='ortho')  # Inverse 1d dct transform
                     elif Ndim == 2:
                         wt[sr, :Nx / 16, :Ny / 16] = coarseScale[sr, :Nx / 16, :Ny / 16]
-                        S[sr] = dct2(wt[sr], type=3, norm='ortho')
+                        S[sr] = wt2d.dct2(wt[sr], type=3, norm='ortho')
         # For non-wavelet representation
         else:
             sig = mad(S)
@@ -322,7 +327,7 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
         tau = 0.0
         mu2 = 0.0
         eta = 0.5
-        for i in np.arange(postProcImax):
+        for i in range(postProcImax):
             S, thIter = update_S_prox_Condat_Vu(V, A, S, M, Nx, Ny, Ndim, Imax=inImax1, tau=tau, eta=eta, Ksig=Ksig,
                                                 wavelet=wavelet, scale=scale, wname=wname, thresStrtg=thresStrtg,
                                                 FTPlane=FTPlane, positivity=positivityS)
@@ -640,7 +645,7 @@ def GMCA_prox(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, ma
     S = np.zeros((n, P))
     # Shat = np.zeros((n, P)) + np.zeros((n, P)) * 1j
     # dtau = float(tau - tauF) / Imax
-    for i in np.arange(Imax):
+    for i in range(Imax):
         # S,thIter = update_S_prox(V, A, S, M, Nx, Ny, Imax, mu1, Ksig, mask, wavelet, scale, wname='starlet',
         #                          thresStrtg=2, FTPlane=True, Ar=None, FISTA=False)
         # S, thIter = update_S_prox(V, A, S, M, Nx, Ny, Imax, mu1, Ksig, mask, wavelet, scale, wname='starlet',

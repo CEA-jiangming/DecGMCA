@@ -147,7 +147,7 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
         
     print("Main cycle")
     
-    for i in np.arange(Imax):
+    for i in range(Imax):
         if mask or deconv:
             epsilon_iter = 10**(epsilon_log - (epsilon_log - epsilonF_log)*float(i)/(Imax-1))       # Exponential linearly decreased
             # epsilon_iter = epsilon - (epsilon - epsilonF)/(Imax-1)*float(i)                # Linear decreased
@@ -183,7 +183,7 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
             elif wname == 'dct':
                 wt = np.zeros((n, Nx, Ny)).squeeze()
                 coarseScale = np.zeros((n, Nx, Ny)).squeeze()
-                for sr in np.arange(n):
+                for sr in range(n):
                     if Ndim == 1:
                         wt[sr] = scifft.dct(S[sr], type=2, norm='ortho')
                         coarseScale[sr, :Ny/16] = wt[sr, :Ny/16]              # Store coarse scale, can be do better in future
@@ -208,7 +208,7 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
                     sig = mad(wt[:, :P])
             elif thresStrtg == 2:
                 sig = np.zeros((n, scale-1))
-                for sr in np.arange(n):
+                for sr in range(n):
                     sig[sr] = mad(wt[sr]) 
             # Compute threshold for the current iteration
             # Thresholding in terms of percentage of significant coefficients
@@ -220,7 +220,7 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
                 hardTh(wt, thTab, weights=None, reweighted=False)
                 # softTh(wt, thTab, weights=None, reweighted=False)
             elif thresStrtg == 2:
-                for sr in np.arange(n):
+                for sr in range(n):
                     hardTh(wt[sr], thTab[sr], weights=None, reweighted=False)
                     # softTh(wt[sr], thTab[sr], weights=None, reweighted=False)
             
@@ -239,7 +239,7 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
                     S = starlet.Nistar2d(wtTmp, gen2=gen2, normalization=True)        # Inverse N sources starlet transform  
                         
             elif wname == 'dct':
-                for sr in np.arange(n):
+                for sr in range(n):
                     if Ndim == 1:
                         wt[sr, :Ny/16] = coarseScale[sr, :Ny/16]
                         S[sr] = scifft.dct(wt[sr], type=3, norm='ortho')                  # Inverse 1d dct transform
@@ -311,7 +311,7 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
         tau = 0.0
         mu2 = 0.0
         eta = 0.5
-        for i in np.arange(postProcImax):
+        for i in range(postProcImax):
             S, thIter = update_S_prox_Condat_Vu(V, A, S, M, Nx, Ny, Ndim, Imax=inImax1, tau=tau, eta=eta, Ksig=Ksig,
                                                 wavelet=wavelet, scale=scale, wname=wname, thresStrtg=thresStrtg,
                                                 FTPlane=FTPlane,positivity=positivityS)
@@ -398,7 +398,7 @@ def update_S_prox(V, A, S, M, Nx, Ny, Imax, mu, Ksig, mask, wavelet, scale, wnam
             coarseScale = np.zeros((N,1,P))
             wtTmp = np.zeros((N,scale,P))
             wt = np.zeros((N,scale-1,P))
-            for sr in np.arange(N):
+            for sr in range(N):
                 wtTmp[sr] = star1d(S[sr], scale=scale, fast=True, gen2=gen2,normalization=True)
                 # coarseScale[sr] = np.copy(wtTmp[sr, -1])
                 # wt[sr] = np.copy(wtTmp[sr, :-1])
@@ -418,7 +418,7 @@ def update_S_prox(V, A, S, M, Nx, Ny, Imax, mu, Ksig, mask, wavelet, scale, wnam
     while it<Imax:
         if wavelet:
             if wname == 'starlet':
-                for sr in np.arange(N):
+                for sr in range(N):
                     Stmp[sr] = adstar1d(wtTmp[sr], fast=True, gen2=gen2, normalization=True)
                 if FTPlane:
                     Stmphat = fftNd1d(Stmp,Ndim)                    # In direct plane
@@ -429,7 +429,7 @@ def update_S_prox(V, A, S, M, Nx, Ny, Imax, mu, Ksig, mask, wavelet, scale, wnam
                 var_rsdN = np.var(rsd)
                 rsd1 = np.real(ifftNd1d(np.dot(A.conj().transpose(), rsd), Ndim))
                 rsdTr = np.zeros((N, scale, P))
-                for sr in np.arange(N):
+                for sr in range(N):
                     rsdTr[sr] = star1d(rsd1[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
                 wtTr = np.copy(rsdTr[:, :-1, :])
                 
@@ -443,7 +443,7 @@ def update_S_prox(V, A, S, M, Nx, Ny, Imax, mu, Ksig, mask, wavelet, scale, wnam
                     # sig = np.array([0.01, 0.01])
                 elif thresStrtg == 2:
                     sig = np.zeros((N, scale-1))
-                    for sr in np.arange(N):
+                    for sr in range(N):
                         # sig = mad(wt[:, :P])                                             # For starlet transform
                         sig[sr] = mad(wtTr[sr]) 
             
@@ -455,7 +455,7 @@ def update_S_prox(V, A, S, M, Nx, Ny, Imax, mu, Ksig, mask, wavelet, scale, wnam
                 hardTh(wt_n, thTab, weights=None, reweighted=False)
                 # softTh(wt, thTab, weights=None, reweighted=False)
             elif thresStrtg == 2:
-                for sr in np.arange(N):
+                for sr in range(N):
                     hardTh(wt_n[sr], thTab[sr], weights=None, reweighted=False)
                     # softTh(wt[sr], thTab[sr], weights=None, reweighted=False)
             wt_n = np.reshape(wt_n, (N, np.size(wt)/(N*P), P))             # For undecimated wavelet transform
@@ -467,7 +467,7 @@ def update_S_prox(V, A, S, M, Nx, Ny, Imax, mu, Ksig, mask, wavelet, scale, wnam
             else:
                 wt1 = np.copy(wt_n)
                 
-            for sr in np.arange(N):
+            for sr in range(N):
                 wtTmp[sr] = np.concatenate((wt1[sr], coarseScale[sr]), axis=0)
             wt = np.copy(wt_n)
             err = abs(var_rsdN-var_rsd)  
@@ -480,7 +480,7 @@ def update_S_prox(V, A, S, M, Nx, Ny, Imax, mu, Ksig, mask, wavelet, scale, wnam
     
     if wavelet:
         if wname == 'starlet':
-            for sr in np.arange(N):
+            for sr in range(N):
                 S[sr] = adstar1d(wtTmp[sr], fast=True, gen2=gen2, normalization=True)
         
     return S, thIter
@@ -565,12 +565,12 @@ def update_S_prox_anal(V, A, S, M, Nx, Ny, Imax, Imax1, mu, mu1, Ksig, mask, wav
         while it_int < Imax1:
             if wavelet:
                 if wname == 'starlet':
-                    for sr in np.arange(N):
+                    for sr in range(N):
                         Stmp[sr] = adstar1d(wtTmp[sr], fast=True, gen2=gen2, normalization=True)
                     
                     rsdInt = S_n - Stmp
                     rsdIntTr = np.zeros((N, scale, P))
-                    for sr in np.arange(N):
+                    for sr in range(N):
                         rsdIntTr[sr] = star1d(rsdInt[sr], scale=scale, fast=True, gen2=gen2, normalization=True)
                     wtTmp_n = wtTmp + mu1*rsdIntTr
                     coarseScale = np.copy(wtTmp_n[:, -1])
@@ -585,7 +585,7 @@ def update_S_prox_anal(V, A, S, M, Nx, Ny, Imax, Imax1, mu, mu1, Ksig, mask, wav
                         # sig = np.array([0.01,0.01])
                     elif thresStrtg == 2:
                         sig = np.zeros((N,scale-1))
-                        for sr in np.arange(N):
+                        for sr in range(N):
                             # sig = mad(wt[:,:P])               # For starlet transform
                             sig[sr] = mad(rsdIntTr[sr]) 
                 
@@ -596,7 +596,7 @@ def update_S_prox_anal(V, A, S, M, Nx, Ny, Imax, Imax1, mu, mu1, Ksig, mask, wav
                         # hardTh(wtTmp_n,thTab,weights=None,reweighted=False)
                         softTh(wtTmp_n, thTab, weights=None, reweighted=False)
                     elif thresStrtg == 2:
-                        for sr in np.arange(N):
+                        for sr in range(N):
                             # hardTh(wtTmp_n[sr],thTab[sr],weights=None,reweighted=False)
                             softTh(wtTmp_n[sr], thTab[sr], weights=None, reweighted=False)
                     wtTmp_n = wtTmp_n1 - wtTmp_n
@@ -608,7 +608,7 @@ def update_S_prox_anal(V, A, S, M, Nx, Ny, Imax, Imax1, mu, mu1, Ksig, mask, wav
             
         if wavelet:
             if wname == 'starlet':
-                for sr in np.arange(N):
+                for sr in range(N):
                     Stmp[sr] = adstar1d(wtTmp[sr], fast=True, gen2=gen2, normalization=True)
         
         S_n = S_n - Stmp            
