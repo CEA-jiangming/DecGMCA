@@ -50,7 +50,7 @@ fc = 1. / 32
 epsilonF = 1e-5
 epsilon = param.epsilon
 logistic = True
-postProc = True
+postProc = False
 Ksig = 0.6
 positivity = True
 
@@ -88,7 +88,7 @@ for db in dbArr:
                                 S = createGrGauss(Nx, Ny, n, alpha=0.2, export=False)
                             if not os.path.exists(drSources + drNum + drReal):
                                 os.makedirs(drSources + drNum + drReal)
-                            fits.writeto(drSources + drNum + drReal + 'S_bd' + str(b) + '.fits', S, clobber=True)
+                            fits.writeto(drSources + drNum + drReal + 'S_bd' + str(b) + '.fits', S, overwrite=True)
                             S = S.astype('float64')
 
                             A = np.random.randn(b, n)  # Mixing matrix
@@ -98,12 +98,12 @@ for db in dbArr:
                             A /= np.sqrt(np.sum(A ** 2, axis=0))  # For numpy version 1.6
                             if not os.path.exists(drMixtures + drNum + drReal):
                                 os.makedirs(drMixtures + drNum + drReal)
-                            fits.writeto(drMixtures + drNum + drReal + 'A_bd' + str(b) + '.fits', A, clobber=True)
+                            fits.writeto(drMixtures + drNum + drReal + 'A_bd' + str(b) + '.fits', A, overwrite=True)
 
                             N = sigS * 10 ** (-db / 20) * np.random.randn(n, Nx * Ny)
                             if not os.path.exists(drNoises + drNum + drReal):
                                 os.makedirs(drNoises + drNum + drReal)
-                            fits.writeto(drNoises + drNum + drReal + 'noise_bd' + str(b) + '.fits', N, clobber=True)
+                            fits.writeto(drNoises + drNum + drReal + 'noise_bd' + str(b) + '.fits', N, overwrite=True)
 
                             if deconv:
                                 kern = createKernel(t_samp=Ny, sigma=[kern_param / ratio, kern_param], bd=b,
@@ -112,7 +112,7 @@ for db in dbArr:
                                 if not os.path.exists(drKernels + drNum + drReal):
                                     os.makedirs(drKernels + drNum + drReal)
                                 fits.writeto(drKernels + drNum + drReal + 'kern_bd' + str(b) + '.fits', kern,
-                                             clobber=True)
+                                             overwrite=True)
                                 kern = ifftshiftNd1d(kern, Ndim)
                                 kernMat = np.reshape(kern, (b, Nx * Ny))
                             else:
@@ -144,7 +144,7 @@ for db in dbArr:
                         V_N = np.dot(A, S_NhatMat) * kernMat
 
                         if DecGMCA:
-                            (S_est, A_est) = DecGMCA(V_N, kernMat, n, Nx, Ny, Imax, epsilon[j], epsilonF, Ndim,
+                            (S_est, A_est, _, _) = DecGMCA(V_N, kernMat, n, Nx, Ny, Imax, epsilon[j], epsilonF, Ndim,
                                                      wavelet=wavelet, scale=4, mask=mask, deconv=deconv,
                                                      wname='starlet', thresStrtg=thresStrtg, FTPlane=FTPlane, fc=fc,
                                                      logistic=logistic, postProc=postProc, Ksig=Ksig)
@@ -156,7 +156,7 @@ for db in dbArr:
                             (S_est, A_est) = GMCA(X, n, Nx, Ny, Imax, Ndim, wavelet=True, scale=4, wname='starlet',
                                                   thresStrtg=1, FTPlane=FTPlane, fc=fc, Ar=A)
 
-                        fits.writeto(drResults + subdr + drReal + 'estS_bd' + str(b) + '.fits', S_est, clobber=True)
-                        fits.writeto(drResults + subdr + drReal + 'estA_bd' + str(b) + '.fits', A_est, clobber=True)
+                        fits.writeto(drResults + subdr + drReal + 'estS_bd' + str(b) + '.fits', S_est, overwrite=True)
+                        fits.writeto(drResults + subdr + drReal + 'estA_bd' + str(b) + '.fits', A_est, overwrite=True)
 
 pylab.show()

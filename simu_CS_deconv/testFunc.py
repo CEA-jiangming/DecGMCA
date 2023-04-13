@@ -77,7 +77,7 @@ for r in np.arange(numTests):
             # S = createBernGauss(Nx, Ny, pcS, sigS, n, psf=False, export=False)
         if not os.path.exists(drSources + drNum + drReal):
             os.makedirs(drSources + drNum + drReal)
-        fits.writeto(drSources + drNum + drReal + 'S_bd' + str(b) + '.fits', S, clobber=True)
+        fits.writeto(drSources + drNum + drReal + 'S_bd' + str(b) + '.fits', S, overwrite=True)
         S = S.astype('float64')
 
         A = np.random.randn(b, n)  # Mixing matrix
@@ -87,19 +87,19 @@ for r in np.arange(numTests):
         A /= np.sqrt(np.sum(A ** 2, axis=0))  # For numpy version 1.6
         if not os.path.exists(drMixtures + drNum + drReal):
             os.makedirs(drMixtures + drNum + drReal)
-        fits.writeto(drMixtures + drNum + drReal + 'A_bd' + str(b) + '.fits', A, clobber=True)
+        fits.writeto(drMixtures + drNum + drReal + 'A_bd' + str(b) + '.fits', A, overwrite=True)
 
         N = sigS * 10 ** (-db / 20) * np.random.randn(n, Nx * Ny)
         if not os.path.exists(drNoises + drNum + drReal):
             os.makedirs(drNoises + drNum + drReal)
-        fits.writeto(drNoises + drNum + drReal + 'noise_bd' + str(b) + '.fits', N, clobber=True)
+        fits.writeto(drNoises + drNum + drReal + 'noise_bd' + str(b) + '.fits', N, overwrite=True)
 
         if mask:
             M = createMask(Nx, Ny, pc, b, export=False)
             M = M.astype('float64')
             if not os.path.exists(drMasks + drNum + drReal):
                 os.makedirs(drMasks + drNum + drReal)
-            fits.writeto(drMasks + drNum + drReal + 'mask_bd' + str(b) + '.fits', M, clobber=True)
+            fits.writeto(drMasks + drNum + drReal + 'mask_bd' + str(b) + '.fits', M, overwrite=True)
             MMat = np.reshape(M, (b, Nx * Ny))
         else:
             MMat = np.ones((b, Nx * Ny))
@@ -117,5 +117,5 @@ for r in np.arange(numTests):
         (S_est, A_est) = DecGMCA(V_N, MMat, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet=wavelet, scale=4,
                                  mask=mask, deconv=deconv, wname='starlet', thresStrtg=2, FTPlane=FTPlane, fc=fc,
                                  logistic=logistic, postProc=postProc, Ksig=Ksig, positivityS=False)
-        fits.writeto(drResults + drNum + drReal + 'estS_bd' + str(b) + '.fits', S_est, clobber=True)
-        fits.writeto(drResults + drNum + drReal + 'estA_bd' + str(b) + '.fits', A_est, clobber=True)
+        fits.writeto(drResults + drNum + drReal + 'estS_bd' + str(b) + '.fits', S_est, overwrite=True)
+        fits.writeto(drResults + drNum + drReal + 'estA_bd' + str(b) + '.fits', A_est, overwrite=True)

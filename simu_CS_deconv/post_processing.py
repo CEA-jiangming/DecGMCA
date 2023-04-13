@@ -135,14 +135,14 @@ for db in dbArr:
                                                                       wname='starlet', thresStrtg=2, FTPlane=True,
                                                                       Ar=None)
                             # fits.writeto(drResult + subdr + drReal + 'estS_post_bd' + str(b) + '_r' + str(r) + '.fits',
-                            #              Se_post, clobber=True)
+                            #              Se_post, overwrite=True)
                         if not os.path.exists(drPostResults + subdr + drReal):
                             os.makedirs(drPostResults + subdr + drReal)
                         fits.writeto(
                             drPostResults + subdr + drReal + 'estS_post_condat_vu_soft_bd' + str(b) + '_Ksig' + str(
-                                Ksig) + '_r' + str(r) + '.fits', Se_post, clobber=True)
+                                Ksig) + '_r' + str(r) + '.fits', Se_post, overwrite=True)
                         # fits.writeto(drResult + subdr + drReal + 'thIter_post_anal_soft_bd' + str(b) + '_Ksig' + str(
-                        #     Ksig) + '_r' + str(r) + '.fits', thIter, clobber=True)
+                        #     Ksig) + '_r' + str(r) + '.fits', thIter, overwrite=True)
                         # Se_post = fits.getdata(
                         #     drResult + subdr + drReal + 'estS_post_anal_soft_bd' + str(b) + '_Ksig' + str(
                         #         Ksig) + '_r' + str(r) + '.fits')
@@ -153,4 +153,4 @@ for db in dbArr:
                         # V_Hi = filter_Hi(V_N, Ndim, 1. / 32)
                         # Ae_post = update_A_prox(V_Hi, Ae, Shat_Hi, M, Imax=500, mu=5e-5)
                         # fits.writeto(drResult + subdr + drReal + 'estA_post_anal_soft_bd' + str(b) + '_Ksig' + str(
-                        #     Ksig) + '_r' + str(r) + '.fits', Ae_post, clobber=True)
+                        #     Ksig) + '_r' + str(r) + '.fits', Ae_post, overwrite=True)

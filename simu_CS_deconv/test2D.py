@@ -90,7 +90,7 @@ n, Nx, Ny = np.shape(S)
 # #
 # if not os.path.exists(drSources + drReal):
 #     os.makedirs(drSources + drReal)
-# fits.writeto(drSources+drReal+'S_bd'+str(b)+'.fits',S,clobber=True)
+# fits.writeto(drSources+drReal+'S_bd'+str(b)+'.fits',S,overwrite=True)
 
 S = S.astype('float64')
 
@@ -108,7 +108,7 @@ A /= np.sqrt(np.sum(A ** 2, axis=0))  # For numpy version 1.6
 
 if not os.path.exists(drMixture + drReal):
     os.makedirs(drMixture + drReal)
-fits.writeto(drMixture + drReal + 'A_bd' + str(bd) + '.fits', A, clobber=True)
+fits.writeto(drMixture + drReal + 'A_bd' + str(bd) + '.fits', A, overwrite=True)
 # A = fits.getdata(drMixture + 'n' + str(n) + '/' + 'A_bd' + str(b) + '.fits')
 # A = fits.getdata(drMixture + drReal + 'A_bd' + str(b) + '.fits')
 if deconv:
@@ -122,7 +122,7 @@ if deconv:
 
     if not os.path.exists(drKernels + drReal):
         os.makedirs(drKernels + drReal)
-    fits.writeto(drKernels + drReal + 'kern_bd' + str(bd) + '.fits', kern, clobber=True)
+    fits.writeto(drKernels + drReal + 'kern_bd' + str(bd) + '.fits', kern, overwrite=True)
 
     kern = np.real(ifftshiftNd1d(kern, Ndim))  # Shift ft to make sure low frequency in the corner
     kernMat = np.reshape(kern, (bd, Nx * Ny))
@@ -137,7 +137,7 @@ if mask:
 
     # if not os.path.exists(drMasks + drNum + drReal):
     #     os.makedirs(drMasks + drNum + drReal)
-    # fits.writeto(drMasks + 'mask_bd' + str(b) + '.fits', M, clobber=True)
+    # fits.writeto(drMasks + 'mask_bd' + str(b) + '.fits', M, overwrite=True)
     #
     # M = ifftshiftNd1d(M, Ndim)  # Shift ft to make sure low frequency in the corner
     MMat = np.reshape(M, (bd, Nx * Ny))
@@ -147,7 +147,7 @@ else:
     # N = sigS * 10 ** (-db / 20.) * np.random.randn(n, Nx, Ny)
     # if not os.path.exists(drNoise + drReal):
     #     os.makedirs(drNoise + drReal)
-    # fits.writeto(drNoise + drReal + 'noise_bd' + str(b) + '.fits', N, clobber=True)
+    # fits.writeto(drNoise + drReal + 'noise_bd' + str(b) + '.fits', N, overwrite=True)
 
 N = fits.getdata(drNoise + 'noise.fits')
 # N = np.delete(N, 1, axis=0)
@@ -182,12 +182,12 @@ for Ksig in np.arange(3.0, 3.1):
     # (S_est, A_est) = GMCA_wavelet(V_N, MMat, n, Nx, Ny, Imax, tauF, epsilon[j], Ndim, wavelet=True, scale=4, mask=mask,
     #                               wname='starlet')
     #
-    # fits.writeto(drResult + subdr + 'r' + str(r) + '/initA_bd' + str(b) + '_r' + str(r) + '.fits', A_init, clobber=True)
-    # fits.writeto(drResult + subdr + drReal + 'estS_bd' + str(bd) + '.fits', S_est, clobber=True)
-    # fits.writeto(drResult + subdr + drReal + 'estA_bd' + str(bd) + '.fits', A_est, clobber=True)
+    # fits.writeto(drResult + subdr + 'r' + str(r) + '/initA_bd' + str(b) + '_r' + str(r) + '.fits', A_init, overwrite=True)
+    # fits.writeto(drResult + subdr + drReal + 'estS_bd' + str(bd) + '.fits', S_est, overwrite=True)
+    # fits.writeto(drResult + subdr + drReal + 'estA_bd' + str(bd) + '.fits', A_est, overwrite=True)
 
     fits.writeto(drResult + subdr + drReal + 'estS_postProc_Ksig' + str(Ksig) + '_bd' + str(bd) + '.fits', Se_postProc,
-                 clobber=True)
+                 overwrite=True)
 
     ####################################################################
     # Plots
