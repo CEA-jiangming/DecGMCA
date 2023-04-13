@@ -128,7 +128,8 @@ def mad(alpha):
     return sigma
 
 
-def softTh(alpha, thTab, weights=None, reweighted=False):
+def softTh(coef, thTab, weights=None, reweighted=False):
+    alpha = np.copy(coef)
     nz = np.size(thTab)
     #     print weights.shape
     #     print thTab.shape
@@ -141,9 +142,11 @@ def softTh(alpha, thTab, weights=None, reweighted=False):
             (alpha[i])[np.abs(alpha[i]) <= thTab[i] * weights[i]] = 0
             (alpha[i])[alpha[i] > 0] -= (thTab[i] * weights[i])[alpha[i] > 0]
             (alpha[i])[alpha[i] < 0] += (thTab[i] * weights[i])[alpha[i] < 0]
+    return alpha
 
 
-def hardTh(alpha, thTab, weights=None, reweighted=False):
+def hardTh(coef, thTab, weights=None, reweighted=False):
+    alpha = np.copy(coef)
     nz = np.size(thTab)
     #     print weights.shape
     #     print thTab.shape
@@ -155,6 +158,7 @@ def hardTh(alpha, thTab, weights=None, reweighted=False):
         else:
             (alpha[i])[np.abs(alpha[i]) <= thTab[i] * weights[i]] = 0
     alpha = alpha.squeeze()
+    return alpha
 
 
 def filter_Hi(sig, Ndim, fc, fc2=1. / 8):
@@ -172,11 +176,17 @@ def filter_Hi(sig, Ndim, fc, fc2=1. / 8):
     if Ndim == 1:
         (nz, ny) = np.shape(sig)
         sig_Hi = np.zeros_like(sig)
-        sig_Hi[:, int(fc * ny):-int(fc * ny)] = sig[:, int(fc * ny):-int(fc * ny)]
+        if fc == 0:
+            sig_Hi = np.copy(sig)
+        else:
+            sig_Hi[:, int(fc * ny):-int(fc * ny)] = sig[:, int(fc * ny):-int(fc * ny)]
     elif Ndim == 2:
         (nz, nx, ny) = np.shape(sig)
         sig_Hi = np.zeros_like(sig)
-        sig_Hi[:, int(fc * nx):-int(fc * nx), int(fc * ny):-int(fc * ny)] = sig[:, int(fc * nx):-int(fc * nx),
+        if fc == 0:
+            sig_Hi = np.copy(sig)
+        else:
+            sig_Hi[:, int(fc * nx):-int(fc * nx), int(fc * ny):-int(fc * ny)] = sig[:, int(fc * nx):-int(fc * nx),
                                                                             int(fc * ny):-int(fc * ny)]
     return sig_Hi
 
@@ -305,7 +315,7 @@ def find_th(S, P_min, sig, it, Imax, strategy=2, Ksig=3):
             for l in range(sc):
                 Stmp_sort = np.sort(abs(Stmp[l]))[::-1]  # Descending order of coefficients
                 Stmp_sort_sig = Stmp_sort[Stmp_sort > Ksig * sig[i, l]]  # Compared with K-sigma
-                P_ind = P_min + (1.0 - P_min) / (Imax - 1) * it  # Current percentage
+                P_ind = P_min + (0.5 - P_min) / (Imax - 1) * it  # Current percentage
                 index = int(np.ceil(P_ind * len(Stmp_sort_sig)) - 1)
                 if index < 0:
                     index = 0

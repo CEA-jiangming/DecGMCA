@@ -381,7 +381,7 @@ def update_S_prox_anal(V, A, S, M, Nx, Ny, Ndim, Imax, ImaxInt, mu, muInt, Ksig,
 
 def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wavelet, scale, wname='starlet',
                             thresStrtg=2, FTPlane=True, Ar=None, positivity=False, PALM=False, currentIter=0,
-                            globalImax=1):
+                            globalImax=1, GT=None):
     """
     Proximal method (Condat-Vu) to estimate sources with sparsity constraint in analysis framework
     
@@ -433,9 +433,10 @@ def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wave
     
     @return: Updated S, size: sources*pixels
     """
+    import sys
+    from scipy.stats import pearsonr
     (Bd, P) = np.shape(V)
     (Bd, N) = np.shape(A)
-    Stmp = np.zeros_like(S)
 
     if tau == 0:
         Lip = LA.norm(np.dot(A, A.transpose()))
@@ -480,7 +481,7 @@ def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wave
     it = 0
     # var_rsd = 0
     err = 1.0
-    tol = 1e-5
+    tol = 1e-8
     errTab = np.zeros(Imax)
 
     if PALM:
@@ -494,6 +495,16 @@ def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wave
         if Ndim == 2:
             Shat = np.reshape(Shat, (N, P))
         rsd = V - H * np.dot(A, Shat)
+
+        # Compare residual and G-T
+        dec_eor = mtl.DeconvFwd(rsd, H, epsilon=sys.float_info.epsilon)
+        dec_eor = np.real(mtl.ifft2d1d(dec_eor.reshape(Bd, Nx, Ny)))
+        errEoR = (np.abs(dec_eor - GT)).sum() / (np.abs(GT)).sum()
+        coef = np.zeros(Bd)
+        for ii in range(Bd):
+            coef[ii], _ = pearsonr(dec_eor[ii].flatten(), GT[ii].flatten())
+        print("Post-proc: Iteration {}, Error: {}, Correlation: {}".format(it, errEoR, coef[::10]))
+
         rsd1 = np.dot(A.conj().transpose(), H * rsd)
         Stmp = np.zeros_like(S)
         if wavelet:
@@ -578,9 +589,9 @@ def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wave
 
         u_n = termQ1 - termQ2
 
-        errS = (((S_n - S) ** 2).sum()) / ((S ** 2).sum())
-        erru = (((u_n - u) ** 2).sum()) / ((u ** 2).sum())
-        err = max(errS, erru)
+        # errS = (((S_n - S) ** 2).sum()) / ((S ** 2).sum())
+        # erru = (((u_n - u) ** 2).sum()) / ((u ** 2).sum())
+        # err = max(errS, erru)
         # if err < tol:
         #     print("Err smaller than tol")
         S = np.copy(S_n)
@@ -588,9 +599,9 @@ def update_S_prox_Condat_Vu(V, A, S, H, Nx, Ny, Ndim, Imax, tau, eta, Ksig, wave
 
         # err = abs(var_rsdN - var_rsd)
         # var_rsd = var_rsdN
-        errTab[it] = err
+        # errTab[it] = err
         it += 1
-    #     print("Iteration:" + str(it))
+        # print("Iteration:" + str(it))
     #     print("Current error:" + str(err))
     #     if it % 10 == 0:
     #         fits.writeto('test5/estS_postProc' + str(it) + '.fits', S, clobber=True)

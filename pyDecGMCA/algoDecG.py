@@ -17,6 +17,7 @@ import pyWavelet.wav2d as wt2d
 import pyWavelet.waveTools as pm
 from pyDecGMCA.pyUtils import *
 from pyDecGMCA.pyProx import *
+from scipy.stats import pearsonr
 
 import sys
 import os
@@ -26,8 +27,7 @@ import re
 
 def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask, deconv, wname='starlet', thresStrtg=2,
             FTPlane=True, fc=1. / 16, logistic=False, postProc=0, postProcImax=50, Kend=3.0, Ksig=3.0,
-            positivityS=False,
-            positivityA=False):
+            positivityS=False, positivityA=False, mixCube=None, csCube=None):
     """
     Deconvolution GMCA algorithm to solve simultaneously deconvolution and Blind Source Separation (BSS)
 
@@ -110,7 +110,7 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
         MM = np.zeros_like(M)
         MM[np.abs(M) >= 1e-4] = 1
         MM = np.real(MM)
-        Xe = SVTCompletion(V, MM, n, 0.5, 500)
+        Xe = SVTCompletion(V, MM, n, 0.5, 10)
     elif deconv and not mask and FTPlane:
         Xe = V_Hi
     else:
@@ -124,6 +124,7 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
     #
     # A = np.copy(Ar)
     normalize(A)
+    # A = fits.getdata('estA_ref.fits')
 
     # Save information of wavelet (Starlet and DCT only)
     if wavelet:
@@ -157,8 +158,9 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
 
     for i in range(Imax):
         if mask or deconv:
-            epsilon_iter = 10 ** (epsilon_log - (epsilon_log - epsilonF_log) * float(i) / (
-                        Imax - 1))  # Exponential linearly decreased
+            # epsilon_iter = 10 ** (epsilon_log - (epsilon_log - epsilonF_log) * float(i) / (
+            #             Imax - 1))  # Exponential linearly decreased
+            epsilon_iter = 0
             # epsilon_iter = epsilon - (epsilon - epsilonF) / (Imax - 1) * float(i)  # Linear decreased
         else:
             epsilon_iter = epsilon
@@ -220,7 +222,7 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
                         fineScale[sr] = wtTmp[0].flatten()
                     sig = mad(fineScale)
                 else:
-                    wt = np.real(np.reshape(wt, (n, np.size(wt) / n)).squeeze())
+                    wt = np.real(np.reshape(wt, (n, np.size(wt) // n)).squeeze())
                     sig = mad(wt[:, :P])
                     # sig = np.array([0.01, 0.01])
             elif thresStrtg == 2:
@@ -231,15 +233,16 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
 
             thTab = find_th(wt, P_min, sig, i, Imax, strategy=thresStrtg, Ksig=Kend)
             # thTab = tau*sig
+            # thTab = [804.82486547, 2480.76016982, 2072.01364484]
             thIter[i] = thTab
 
             # Thresholding in terms of percentage of significant coefficients
             if thresStrtg == 1:
-                hardTh(wt, thTab, weights=None, reweighted=False)
+                wt = hardTh(wt, thTab, weights=None, reweighted=False)
                 # softTh(wt, thTab, weights=None, reweighted=False)
             elif thresStrtg == 2:
                 for sr in range(n):
-                    hardTh(wt[sr], thTab[sr], weights=None, reweighted=False)
+                    wt[sr] = hardTh(wt[sr], thTab[sr], weights=None, reweighted=False)
                     # softTh(wt[sr], thTab[sr], weights=None, reweighted=False)
 
                     # wt = np.reshape(wt, (n, np.size(wt)/(n*P), P))             # For undecimated wavelet transform
@@ -273,7 +276,7 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
             thTab = find_th(S, P_min, sig, i, Imax, strategy=thresStrtg, Ksig=Kend)
             thIter[i] = thTab
             # print(thTab)
-            hardTh(S, thTab, weights=None, reweighted=False)
+            S = hardTh(S, thTab, weights=None, reweighted=False)
 
         index = check_zero_sources(A, Shat.reshape((n, P)))
         if len(index) > 0:
@@ -304,7 +307,21 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
         A = np.real(A)
         if positivityA:
             A[A < 0] = 0
+        index = check_zero_sources(A, Shat.reshape((n, P)))
+        if len(index) > 0:
+            reinitialize_sources(V, Shat.reshape((n, P)), A, index)
+            A[np.isnan(A)] = 0
+            A = np.real(A)
         normalize(A)
+
+        # test evaluation
+        # piA = np.linalg.inv(A.T @ A) @ A.T
+        # S_est = piA @ mixCube.reshape((Bd, -1))
+        # res = mixCube.reshape(Bd, -1) - A @ S_est.reshape(n, -1)
+        # # res = mixCube.reshape(Bd, -1) - A@S.reshape(n, -1)
+        # coef = np.zeros(Bd)
+        # for ii in range(Bd):
+        #     coef[ii], _ = pearsonr(res[ii].flatten(), csCube[ii].flatten())
 
         print("Iteration: " + str(i + 1))
         print("Condition number of A:")
@@ -317,9 +334,26 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
     # Ameliorate the estimation of the sources
     if postProc == 1:
         print('Post processing to ameliorate the estimate S:')
+        # Shat = update_S(V, A, M, mask=mask, deconv=deconv, epsilon=0.)
+        # Shat[np.isnan(Shat)] = np.zeros(1).astype('complex64')
+        # deltaV = V - M * (A @ Shat)
+        # deltaShat = update_S(deltaV, A, M, mask=mask, deconv=deconv, epsilon=0.)
+        # deltaShat[np.isnan(deltaShat)] = np.zeros(1).astype('complex64')
+        # Shat += deltaShat
+        # deltaV_n = V - M * (A @ Shat)
+        # deltaV = deltaV_n
+        # # Compare residual and G-T
+        # dec_eor = DeconvFwd(deltaV, M, epsilon=sys.float_info.epsilon)
+        # dec_eor = np.real(ifft2d1d(dec_eor.reshape(Bd, Nx, Ny)))
+        # errEoR = (np.abs(dec_eor - csCube)).sum() / (np.abs(csCube)).sum()
+        # coef = np.zeros(Bd)
+        # for ii in range(Bd):
+        #     coef[ii], _ = pearsonr(dec_eor[ii].flatten(), csCube[ii].flatten())
+
+        # S = np.real(ifft2d1d(Shat.reshape(n, Nx,Ny)))
         S, thIter = update_S_prox_Condat_Vu(V, A, S, M, Nx, Ny, Ndim, Imax=postProcImax, tau=0.0, eta=0.5, Ksig=Ksig,
                                             wavelet=wavelet, scale=scale, wname=wname, thresStrtg=thresStrtg,
-                                            FTPlane=FTPlane, positivity=positivityS)
+                                            FTPlane=FTPlane, positivity=positivityS, GT=csCube)
     elif postProc == 2:
         print('Post processing to ameliorate the estimate S and estimate A:')
         inImax1 = 50
@@ -358,7 +392,84 @@ def DecGMCA(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, mask
 
         S = np.real(np.reshape(S, (n, Nx, Ny)).squeeze())
 
-    return S, A
+    elif postProc == 3:
+        print('Post processing to ameliorate the estimate S:')
+
+        for i in range(3):
+            Shat = update_S(V, A, M, mask=mask, deconv=deconv, epsilon=0.)
+            Shat[np.isnan(Shat)] = np.zeros(1).astype('complex64')
+            deltaV = V - M * (A @ Shat)
+            # if FTPlane:
+            #     S = np.real(ifftNd1d(np.reshape(Shat, (n, Nx, Ny)).squeeze(), Ndim))  # In direct plane
+            #
+            # deltaS, thIter = update_S_prox_Condat_Vu(deltaV, A, np.zeros_like(S), M, Nx, Ny, Ndim, Imax=10, tau=0.0,
+            #                                          eta=0.5,
+            #                                          Ksig=Kend,
+            #                                          wavelet=wavelet, scale=scale, wname=wname, thresStrtg=thresStrtg,
+            #                                          FTPlane=FTPlane, positivity=positivityS)
+            # if FTPlane:
+            #     deltaShat = fftNd1d(deltaS, Ndim)  # Transform in Fourier space
+            # Shat += deltaShat.reshape(n, P)
+
+            errRes = 1.
+            while errRes > 1.e-6:
+                deltaShat = update_S(deltaV, A, M, mask=mask, deconv=deconv, epsilon=0.)
+                deltaShat[np.isnan(deltaShat)] = np.zeros(1).astype('complex64')
+                Shat += deltaShat
+                deltaV_n = V - M * (A @ Shat)
+                # errRes = LA.norm(deltaV_n - deltaV) / LA.norm(deltaV)
+                errRes = (deltaV_n - deltaV).std()
+                deltaV = deltaV_n
+
+                # Compare residual and G-T
+                dec_eor = DeconvFwd(deltaV, M, epsilon=sys.float_info.epsilon)
+                dec_eor = np.real(ifft2d1d(dec_eor.reshape(Bd, Nx, Ny)))
+                errEoR = (np.abs(dec_eor - csCube)).sum() / (np.abs(csCube)).sum()
+                coef = np.zeros(Bd)
+                for ii in range(Bd):
+                    coef[ii], _ = pearsonr(dec_eor[ii].flatten(), csCube[ii].flatten())
+                print("Post-proc: Iteration {}, Error: {}, Correlation: {}".format(i, errEoR, coef[::10]))
+                print('Relative error of residual observation: {}'.format(errRes))
+
+            deltaV_Hi = filter_Hi(ifftshiftNd1d(deltaV.reshape(Bd, Nx, Ny), Ndim), Ndim, fc)
+            deltaV_Hi = deltaV_Hi.reshape(Bd, P)
+            Shat_Hi = filter_Hi(ifftshiftNd1d(Shat.reshape(n, Nx, Ny), Ndim), Ndim, fc)
+            Shat_Hi = Shat_Hi.reshape(n, P)
+            deltaA = update_A(deltaV_Hi, Shat_Hi, M, mask=mask, deconv=deconv)
+            # if FTPlane:
+            #     # Shat = fftNd1d(Shat.reshape(n, Nx, Ny), Ndim)  # Transform in Fourier space
+            #     Shat = Shat.reshape(n, Nx, Ny)
+            #     # Don't take the low frequency band into account
+            #     Shat_Hi = filter_Hi(ifftshiftNd1d(Shat, Ndim), Ndim, fc)
+            #     if Ndim == 1 and logistic:  # If logistic function is activated, particular processing is designed for 1d signal
+            #         Shat_Hi[:, int(fc * P):int(fc_pass * P)] = Shat_Hi[:, int(fc * P):int(fc_pass * P)] * flogist1
+            #         Shat_Hi[:, int(-fc_pass * P):int(-fc * P)] = Shat_Hi[:, int(-fc_pass * P):int(-fc * P)] * flogist2
+            #     Shat_Hi = fftshiftNd1d(Shat_Hi, Ndim)
+            #     Shat_Hi = np.reshape(Shat_Hi, (n, P))
+            #     # Update A
+            #     # A = update_A(V_Hi, Shat_Hi, M, mask=mask, deconv=deconv)
+            # deltaA = update_A_prox(deltaV_Hi, np.zeros_like(A), Shat_Hi, M, 5, 0.0, mask=mask, positivity=positivityA)
+            A += np.real(deltaA)
+            A = np.real(A)
+            normalize(A)
+
+        if FTPlane:
+            S = np.real(ifftNd1d(np.reshape(Shat, (n, Nx, Ny)).squeeze(), Ndim))  # In direct plane
+            if positivityS:
+                S[S < 0] = 0
+        deltaV = deltaV.reshape(Bd, Nx, Ny)
+
+    else:
+        Shat = update_S(V, A, M, mask=mask, deconv=deconv, epsilon=0.)
+        Shat[np.isnan(Shat)] = np.zeros(1).astype('complex64')
+        deltaV = V - M * (A @ Shat)
+        if FTPlane:
+            S = np.real(ifftNd1d(np.reshape(Shat, (n, Nx, Ny)).squeeze(), Ndim))  # In direct plane
+            if positivityS:
+                S[S < 0] = 0
+        deltaV = deltaV.reshape(Bd, Nx, Ny)
+
+    return S, A, deltaV, thIter
 
 
 ##########################################################################
@@ -691,3 +802,262 @@ def GMCA_prox(V, M, n, Nx, Ny, Imax, epsilon, epsilonF, Ndim, wavelet, scale, ma
     # S = np.real(ifftNd1d(np.reshape(Shat, (n, Nx, Ny)).squeeze(), Ndim))
     S = np.real(np.reshape(S, (n, Nx, Ny)).squeeze())
     return S, A
+
+
+def GMCA(X, n=2, maxts=7, mints=3, nmax=100, L0=0, UseP=1, verb=0, Init=0, Aposit=False, BlockSize= None, NoiseStd=[],
+         IndNoise=[], Kmax=1., AInit=None, tol=1e-6, ColFixed=None):
+    import numpy as np
+    import scipy.linalg as lng
+    import copy as cp
+
+    nX = np.shape(X)
+    m = nX[0]
+    t = nX[1]
+    Xw = cp.copy(X)
+
+    if BlockSize == None:
+        BlockSize = n
+
+    if verb:
+        print("Initializing ...")
+    if Init == 0:
+        R = np.dot(Xw, Xw.T)
+        D, V = lng.eig(R)
+        A = V[:, 0:n]
+    if Init == 1:
+        A = np.random.randn(m, n)
+    if AInit is not None:
+        A = cp.deepcopy(AInit)
+
+    for r in range(0, n):
+        A[:, r] = A[:, r] / lng.norm(A[:, r])  # - We should do better than that
+
+    if ColFixed is not None:
+        p_fixed = np.shape(ColFixed)[1]
+        A[:, 0:p_fixed] = ColFixed
+
+    S = np.dot(A.T, Xw)
+
+    # Call the core algorithm
+
+    S, A = Core_GMCA(X=Xw, A=A, S=S, n=n, maxts=maxts, BlockSize=BlockSize, Aposit=Aposit, tol=tol, kend=mints,
+                     nmax=nmax, L0=L0, UseP=UseP, verb=verb, IndNoise=IndNoise, Kmax=Kmax, NoiseStd=NoiseStd,
+                     ColFixed=ColFixed)
+
+    Results = {"sources": S, "mixmat": A}
+
+    return Results
+
+
+################# AMCA internal code (Weighting the sources only)
+
+def Core_GMCA(X=0, n=0, A=0, S=0, maxts=7, kend=3, nmax=100, BlockSize=2, L0=1, Aposit=False, UseP=0, verb=0,
+              IndNoise=[], Kmax=0.5, NoiseStd=[], tol=1e-6, ColFixed=None):
+    # --- Import useful modules
+    import numpy as np
+    import scipy.linalg as lng
+    import copy as cp
+    import scipy.io as sio
+    import time
+
+    # --- Init
+
+    n_X = np.shape(X)
+    n_S = np.shape(S)
+
+    if ColFixed is not None:
+        p_fixed = np.shape(ColFixed)[1]
+
+    k = maxts
+    dk = (k - kend) / (nmax - 1)
+    perc = Kmax / nmax
+    Aold = cp.deepcopy(A)
+    #
+    Go_On = 1
+    it = 1
+    #
+    if verb:
+        print("Starting main loop ...")
+        print(" ")
+        print("  - Final k: ", kend)
+        print("  - Maximum number of iterations: ", nmax)
+        if UseP:
+            print("  - Using support-based threshold estimation")
+        if L0:
+            print("  - Using L0 norm rather than L1")
+        if Aposit:
+            print("  - Positivity constraint on A")
+        print(" ")
+        print(" ... processing ...")
+        start_time = time.time()
+
+    if Aposit:
+        A = abs(A)
+
+    Resi = cp.deepcopy(X)
+
+    # --- Main loop
+    while Go_On:
+        it += 1
+
+        if it == nmax:
+            Go_On = 0
+
+        # --- Estimate the sources
+
+        sigA = np.sum(A * A, axis=0)
+        indS = np.where(sigA > 0)[0]
+
+        if np.size(indS) > 0:
+
+            # Using blocks
+
+            # IndBatch = randperm(len(indS))  #---- mini-batch amongst available sources
+
+            # if BlockSize+1 < len(indS):
+            #     indS = indS[IndBatch[0:BlockSize]]
+
+            # Resi = Resi + np.dot(A[:,indS],S[indS,:])   # Putting back the sources
+
+            Ra = np.dot(A[:, indS].T, A[:, indS])
+            Ua, Sa, Va = np.linalg.svd(Ra)
+            Sa[Sa < np.max(Sa) * 1e-9] = np.max(Sa) * 1e-9
+            iRa = np.dot(Va.T, np.dot(np.diag(1. / Sa), Ua.T))
+            piA = np.dot(iRa, A[:, indS].T)
+            S[indS, :] = np.dot(piA, Resi)
+
+            # Propagation of the noise statistics
+
+            if len(NoiseStd) > 0:
+                SnS = 1. / (n_X[1] ** 2) * np.diag(np.dot(piA, np.dot(np.diag(NoiseStd ** 2), piA.T)))
+
+            # Thresholding
+
+            Stemp = S[indS, :]
+            Sref = cp.copy(S)
+
+            for r in range(len(indS)):
+
+                St = Stemp[r, :]
+
+                if len(IndNoise) > 0:
+                    tSt = kend * mad(St[IndNoise])
+                elif len(NoiseStd) > 0:
+                    tSt = kend * np.sqrt(SnS[indS[r]])
+                else:
+                    tSt = kend * mad(St)
+
+                indNZ = np.where(abs(St) - tSt > 0)[0]
+                thrd = mad(St[indNZ])
+
+                if UseP == 0:
+                    thrd = k * thrd
+
+                if UseP == 1:
+                    Kval = np.min([np.floor(np.max([2. / n_S[1], perc * it]) * len(indNZ)), n_S[1] - 1.])
+                    I = abs(St[indNZ]).argsort()[::-1]
+                    Kval = np.int(np.min([np.max([Kval, 5.]), len(I) - 1.]))
+                    IndIX = np.int(indNZ[I[Kval]])
+                    thrd = abs(St[IndIX])
+
+                if UseP == 2:
+                    t_max = np.max(abs(St[indNZ]))
+                    t_min = np.min(abs(St[indNZ]))
+                    thrd = (0.5 * t_max - t_min) * (1 - (it - 1.) / (nmax - 1)) + t_min  # We should check that
+
+                St[(abs(St) < thrd)] = 0
+                indNZ = np.where(abs(St) > thrd)[0]
+
+                if L0 == 0:
+                    St[indNZ] = St[indNZ] - thrd * np.sign(St[indNZ])
+
+                Stemp[r, :] = St
+
+            S[indS, :] = Stemp
+
+            k = k - dk
+
+        # --- Updating the mixing matrix
+
+        Xr = cp.deepcopy(Resi)
+
+        if ColFixed is not None:
+            sigA = np.sum(S * S, axis=1)
+            sigA[0:p_fixed] = 0
+            indS = np.where(sigA > 0)[0]
+
+        Rs = np.dot(S[indS, :], S[indS, :].T)
+        Us, Ss, Vs = np.linalg.svd(Rs)
+        Ss[Ss < np.max(Ss) * 1e-9] = np.max(Ss) * 1e-9
+        iRs = np.dot(Us, np.dot(np.diag(1. / Ss), Vs))
+        piS = np.dot(S[indS, :].T, iRs)
+        A[:, indS] = np.dot(Resi, piS)
+
+        if Aposit:
+            for r in range(len(indS)):
+                if A[(abs(A[:, indS[r]]) == np.max(abs(A[:, indS[r]]))), indS[r]] < 0:
+                    A[:, indS[r]] = -A[:, indS[r]]
+                    S[indS[r], :] = -S[indS[r], :]
+                A = A * (A > 0)
+
+        A = A / np.maximum(1e-24, np.sqrt(np.sum(A * A, axis=0)))
+
+        DeltaA = np.max(abs(1. - abs(np.sum(A * Aold, axis=0))))  # Angular variations
+
+        if DeltaA < tol:
+            if it > 500:
+                Go_On = 0
+
+        if verb:
+            print("Iteration #", it, " - Delta = ", DeltaA)
+
+        Aold = cp.deepcopy(A)
+
+        # Resi = Resi - np.dot(A[:,indS],S[indS,:])  # Re-defining the residual
+
+    if verb:
+        elapsed_time = time.time() - start_time
+        print("Stopped after ", it, " iterations, in ", elapsed_time, " seconds")
+    #
+    return S, A
+
+
+def run_GMCA(X_wt, AInit, n_s, mints, nmax, L0, ColFixed, whitening, epsi):
+    # First guess mixing matrix (could be set to None or not provided at all)
+    if AInit is None:
+        AInit = np.random.rand(len(X_wt), n_s)
+
+    print('\nNow running GMCA . . .')
+
+    if whitening:
+
+        R = X_wt @ X_wt.T
+        L, U = np.linalg.eig(R)
+        ## whitening the data
+
+        Q = np.diag(1. / (L + epsi * np.max(L))) @ U.T
+        iQ = U @ np.diag((L + epsi * np.max(L)))
+
+        if ColFixed is None:
+            CL = None
+        else:
+            CL = Q @ ColFixed
+
+        # start_w = time.time()
+        Results = GMCA(Q @ X_wt, n=n_s, mints=mints, nmax=nmax, L0=L0, Init=0, AInit=AInit, ColFixed=CL)
+        # end_w = time.time()
+
+        Ae = iQ @ Results["mixmat"]  # estimated mixing matrix
+
+    else:
+        # start_w = time.time()
+        Results = GMCA(X_wt, n=n_s, mints=mints, nmax=nmax, L0=L0, Init=0, AInit=AInit, ColFixed=ColFixed)
+        # end_w = time.time()
+
+        Ae = Results["mixmat"]
+
+    # tw = end_w - start_w
+    # print('. . completed in %.2f minutes\n' % (tw / 60))
+
+    return Ae
+
